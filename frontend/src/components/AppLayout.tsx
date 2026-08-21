@@ -5,6 +5,8 @@ import { useTheme } from "../lib/theme-context"
 
 // Shared chrome for the whole app. The brand renders the correct logo file
 // for the active theme and the navbar's top-right host the light/dark toggle.
+// The 866x288 transparent logos are displayed at h-8 (32px), which renders the
+// wordmark glyph at ~13px — matching the text-sm nav links and 32px toggle.
 export default function AppLayout() {
   const { isLoaded, isSignedIn, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -15,7 +17,7 @@ export default function AppLayout() {
     <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
         <div className="flex h-14 w-full items-center justify-between px-4 lg:px-3">
-          <Link to="/" className="inline-flex items-center gap-2" aria-label="Not Your Gig home">
+          <Link to="/" className="inline-flex items-center" aria-label="Not Your Gig home">
             <img
               src={
                 isDark
@@ -23,7 +25,7 @@ export default function AppLayout() {
                   : "/logos/FinalLogo.png"
               }
               alt="Not Your Gig"
-              className="h-10 w-auto"
+              className="h-8 w-auto shrink-0"
             />
           </Link>
           <nav className="flex items-center gap-4 text-sm text-muted-foreground">

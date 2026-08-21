@@ -1,12 +1,7 @@
-import { ValidationPipe } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
+import { createApp } from "./app.factory";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix("api");
-  app.enableCors(); // local dev default; lock down origins before prod
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  const app = await createApp();
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

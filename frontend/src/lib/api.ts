@@ -1,7 +1,20 @@
-// Minimal typed fetch wrapper for the NestJS backend (same-origin /api via
-// the Vite dev proxy). Attaches the Clerk session token automatically when
-// a token provider is registered (see UserProvider).
-const API_BASE = "/api"
+// Minimal typed fetch wrapper for the NestJS backend. Attaches the Clerk
+// session token automatically when a token provider is registered (see
+// UserProvider).
+//
+// API base resolution:
+//  - Production (Vercel, separate frontend/backend projects): the frontend is
+//    built with VITE_API_URL set to the deployed backend's full API base
+//    (origin + /api), e.g. "https://nyg-backend.vercel.app/api". No trailing
+//    slash needed.
+//  - Local dev: no VITE_API_URL -> same-origin "/api", forwarded by the Vite
+//    dev proxy (vite.config.ts) to the NestJS backend on localhost:3000.
+const apiBaseFromEnv = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+const API_BASE = apiBaseFromEnv
+  ? apiBaseFromEnv.endsWith("/")
+    ? apiBaseFromEnv.slice(0, -1)
+    : apiBaseFromEnv
+  : "/api"
 
 export class ApiError extends Error {
   constructor(
