@@ -83,7 +83,7 @@ export default function ProjectDetailPage() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5">
             <img
-              src="/logos/LogoPic.png"
+              src="/assets/LogoPic.png"
               alt=""
               aria-hidden="true"
               className="h-8 w-auto shrink-0"

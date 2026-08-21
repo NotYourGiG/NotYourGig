@@ -23,8 +23,8 @@ export default function AppLayout() {
             <img
               src={
                 isDark
-                  ? "/logos/FinalLogoForDarkTheme.png"
-                  : "/logos/FinalLogo.png"
+                  ? "/assets/FinalLogoForDarkTheme.png"
+                  : "/assets/FinalLogo.png"
               }
               alt="Not Your Gig"
               className="h-8 w-auto shrink-0 max-w-none sm:h-[76px]"
