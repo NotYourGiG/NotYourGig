@@ -5,8 +5,10 @@ import { useTheme } from "../lib/theme-context"
 
 // Shared chrome for the whole app. The brand renders the correct logo file
 // for the active theme and the navbar's top-right host the light/dark toggle.
-// The 866x288 transparent logos are displayed at h-8 (32px), which renders the
-// wordmark glyph at ~13px — matching the text-sm nav links and 32px toggle.
+// Logo sizing: at sm+ the transparent 866x288 logos render at h-[76px], so the
+// wordmark glyph (~42-44% of the canvas) reads at ~32px — matching the ~32px
+// Sign in button. On small phones a smaller h-8 is used so the 866:288 aspect
+// is preserved (w-auto + max-w-none) and the header never overflows.
 export default function AppLayout() {
   const { isLoaded, isSignedIn, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -25,7 +27,7 @@ export default function AppLayout() {
                   : "/logos/FinalLogo.png"
               }
               alt="Not Your Gig"
-              className="h-8 w-auto shrink-0"
+              className="h-8 w-auto shrink-0 max-w-none sm:h-[76px]"
             />
           </Link>
           <nav className="flex items-center gap-4 text-sm text-muted-foreground">
