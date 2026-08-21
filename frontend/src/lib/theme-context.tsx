@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -39,6 +40,27 @@ const ThemeContext = createContext<ThemeContextValue>({
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(readInitialTheme)
 
+  // Apply the class synchronously on change so any component that reads the
+  // theme tokens during the next render (e.g. the Clerk auth widget) sees the
+  // correct values immediately. The initial class comes from the pre-paint
+  // script in index.html; this also covers SSR-less edge cases.
+  const setTheme = useCallback(
+    (next: Theme) => {
+      applyClass(next)
+      setThemeState(next)
+    },
+    [],
+  )
+
+  const toggleTheme = useCallback(
+    () => setThemeState((t) => {
+      const next = t === "dark" ? "light" : "dark"
+      applyClass(next)
+      return next
+    }),
+    [],
+  )
+
   useEffect(() => {
     applyClass(theme)
     try {
@@ -50,13 +72,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme])
 
   const value = useMemo<ThemeContextValue>(
-    () => ({
-      theme,
-      setTheme: setThemeState,
-      toggleTheme: () =>
-        setThemeState((t) => (t === "dark" ? "light" : "dark")),
-    }),
-    [theme],
+    () => ({ theme, setTheme, toggleTheme }),
+    [theme, setTheme, toggleTheme],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
