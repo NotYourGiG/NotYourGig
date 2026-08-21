@@ -1,0 +1,17 @@
+{
+  "name": "Not Your Gig — Proof > Resume",
+  "short_name": "Not Your Gig",
+  "description": "Find work, find talent, find teammates — built around what you've actually shipped.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
