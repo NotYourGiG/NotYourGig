@@ -35,6 +35,30 @@ export default function ProfilePage() {
 
   const [error, setError] = useState<string | null>(null)
 
+  // GitHub connect (proof-of-work) UI state.
+  const [connecting, setConnecting] = useState(false)
+  const [githubMessage, setGithubMessage] = useState<string | null>(null)
+  // Read once: after the OAuth callback the backend 302s back here with
+  // ?github=verified|none|error so we can show a non-breaking note.
+  const [githubResult] = useState(
+    () => new URLSearchParams(window.location.search).get("github"),
+  )
+
+  useEffect(() => {
+    if (!githubResult) return
+    window.history.replaceState({}, "", window.location.pathname)
+    if (githubResult === "verified") {
+      setGithubMessage("GitHub connected — verified skills are marked with a badge below.")
+    } else if (githubResult === "none") {
+      setGithubMessage(
+        "GitHub connected, but none of your repo languages matched a skill you’ve added yet.",
+      )
+    } else {
+      setGithubMessage("GitHub connection didn’t complete. You can try again.")
+    }
+    refresh() // re-sync users row so github_connected_at / username update
+  }, [githubResult, refresh])
+
   useEffect(() => {
     if (!user) return
     api<{ user: Profile }>(`/users/${user.id}`)
@@ -106,6 +130,26 @@ export default function ProfilePage() {
     }
   }
 
+  // GET /auth/github/connect returns the GitHub authorize URL; navigate the
+  // browser there. On success/failure the callback 302s back to this page
+  // with ?github=…, so any error only shows the inline note — it never
+  // breaks the profile.
+  async function connectGithub() {
+    if (!user) return
+    setConnecting(true)
+    setError(null)
+    setGithubMessage(null)
+    try {
+      const d = await api<{ url: string }>("/auth/github/connect")
+      window.location.href = d.url
+      // component will be unloaded on redirect; reset for safety if not
+      setConnecting(false)
+    } catch (e) {
+      setConnecting(false)
+      setError(e instanceof Error ? e.message : "Couldn't start GitHub connect")
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -174,11 +218,48 @@ export default function ProfilePage() {
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold">Skills</h2>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-border bg-card p-3">
+          {user?.github_connected_at ? (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">GitHub</span>
+              {user.github_username ? (
+                <a
+                  href={`https://github.com/${user.github_username}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium underline"
+                >
+                  @{user.github_username}
+                </a>
+              ) : (
+                <span className="font-medium">connected</span>
+              )}
+              <Badge className="bg-primary/10 text-primary">✓ Verified</Badge>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={connectGithub} disabled={connecting}>
+              {connecting ? "Connecting…" : "Connect GitHub"}
+            </Button>
+          )}
+        </div>
+
+        {githubMessage ? (
+          <p className="mb-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            {githubMessage}
+          </p>
+        ) : null}
+
         <div className="mb-4 flex flex-wrap gap-2">
           {profile?.skills.length ? (
             profile.skills.map((us) => (
-              <Badge key={us.skill.id}>
+              <Badge key={us.skill.id} className="items-center gap-1">
                 {us.skill.name} · {us.level}
+                {us.verified_via === "github" ? (
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    ✓ Verified from GitHub
+                  </span>
+                ) : null}
               </Badge>
             ))
           ) : (

@@ -9,6 +9,9 @@ export interface User {
   location: string | null
   availability_status: string
   primary_role: string
+  // GitHub verification (proof-of-work, separate from Clerk auth).
+  github_username: string | null
+  github_connected_at: string | null
 }
 
 export interface Skill {
@@ -20,6 +23,8 @@ export interface Skill {
 export interface UserSkill {
   skill: Skill
   level: string
+  /** Non-null when this skill row was verified via an external source ('github'). */
+  verified_via: string | null
 }
 
 export interface ProofEntry {

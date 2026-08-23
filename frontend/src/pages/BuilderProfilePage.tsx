@@ -61,8 +61,13 @@ export default function BuilderProfilePage() {
         {profile.skills.length ? (
           <div className="flex flex-wrap gap-2">
             {profile.skills.map((us) => (
-              <Badge key={us.skill.id}>
+              <Badge key={us.skill.id} className="items-center gap-1">
                 {us.skill.name} · {us.level}
+                {us.verified_via === "github" ? (
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    ✓ Verified from GitHub
+                  </span>
+                ) : null}
               </Badge>
             ))}
           </div>
