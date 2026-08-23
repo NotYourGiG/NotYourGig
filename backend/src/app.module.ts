@@ -6,6 +6,7 @@ import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { ApplicationsModule } from "./applications/applications.module";
+import { GithubModule } from "./github/github.module";
 
 // Bootstrap + feature modules per blueprint.md Build Order.
 // Search module is added with Section E.
@@ -19,6 +20,7 @@ import { ApplicationsModule } from "./applications/applications.module";
     UsersModule,
     ProjectsModule,
     ApplicationsModule,
+    GithubModule,
   ],
   controllers: [HealthController],
 })

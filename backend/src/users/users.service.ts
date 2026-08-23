@@ -56,12 +56,13 @@ export class UsersService {
     // object — normalize both.
     const { data, error } = await client
       .from("user_skills")
-      .select("level, skill:skills(id, name, category)")
+      .select("level, verified_via, skill:skills(id, name, category)")
       .eq("user_id", userId);
     if (error) throw new Error(`DB error: ${error.message}`);
 
     const rows = (data ?? []) as unknown as Array<{
       level: string;
+      verified_via: string | null;
       skill: unknown;
     }>;
     const skills = rows.map((row) => {
@@ -69,6 +70,7 @@ export class UsersService {
       return {
         skill: (skill as { id: string; name: string; category: string } | null) ?? null,
         level: row.level,
+        verified_via: row.verified_via ?? null,
       };
     });
     skills.sort((a, b) => (a.skill?.name ?? "").localeCompare(b.skill?.name ?? ""));
