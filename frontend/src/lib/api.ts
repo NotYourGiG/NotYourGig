@@ -9,12 +9,21 @@
 //    slash needed.
 //  - Local dev: no VITE_API_URL -> same-origin "/api", forwarded by the Vite
 //    dev proxy (vite.config.ts) to the NestJS backend on localhost:3000.
+//
+// NestJS route prefix: every backend route lives under a global /api prefix
+// (app.factory.ts: setGlobalPrefix("api")), and api() builds `${API_BASE}${path}`
+// e.g. "/auth/me" -> ".../api/auth/me". So VITE_API_URL MUST include the /api
+// suffix. A common misconfiguration is setting only the bare backend origin,
+// which silently 404s every call against the running backend. normalizeApiBase()
+// guards against that by appending /api when it's missing.
 const apiBaseFromEnv = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
-const API_BASE = apiBaseFromEnv
-  ? apiBaseFromEnv.endsWith("/")
-    ? apiBaseFromEnv.slice(0, -1)
-    : apiBaseFromEnv
-  : "/api"
+
+function normalizeApiBase(base: string): string {
+  const trimmed = base.replace(/\/+$/, "") // strip any trailing slashes
+  return /\/api$/i.test(trimmed) ? trimmed : `${trimmed}/api`
+}
+
+const API_BASE = apiBaseFromEnv ? normalizeApiBase(apiBaseFromEnv) : "/api"
 
 export class ApiError extends Error {
   constructor(
