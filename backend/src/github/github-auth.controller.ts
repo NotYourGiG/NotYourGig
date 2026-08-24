@@ -21,10 +21,8 @@ export class GithubAuthController {
    */
   @UseGuards(ClerkAuthGuard)
   @Get("connect")
-  connect(@Req() req: AuthenticatedRequest, @Res() res: Response) {
-    console.log("[github-connect] handler entered");
+  connect(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const url = this.githubService.buildAuthorizeUrl(req.authUser.id, res);
-    console.log("[github-connect] buildAuthorizeUrl returned");
     return { url };
   }
 

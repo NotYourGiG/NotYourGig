@@ -49,7 +49,6 @@ export class ClerkAuthGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log("[clerk-auth-guard] canActivate entered");
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const header = req.headers.authorization;
     const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
