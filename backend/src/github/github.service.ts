@@ -252,7 +252,8 @@ export class GithubService {
       `${STATE_COOKIE}=${value}`,
       "Path=/",
       "HttpOnly",
-      "SameSite=Lax",
+      "SameSite=None", // held across the cross-origin redirect chain (backend -> github.com -> backend)
+      "Secure",        // required by browsers for SameSite=None (and the callback is HTTPS)
       `Max-Age=${Math.floor(STATE_TTL_MS / 1000)}`,
     ].join("; "));
   }
@@ -281,7 +282,10 @@ export class GithubService {
   }
 
   private clearStateCookie(res: Response): void {
-    res.setHeader("Set-Cookie", `${STATE_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+    res.setHeader(
+      "Set-Cookie",
+      `${STATE_COOKIE}=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0`,
+    );
   }
 
   private stateSecret(): string {
