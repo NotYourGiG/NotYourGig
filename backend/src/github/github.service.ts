@@ -63,12 +63,19 @@ export class GithubService {
    * Returns the URL the frontend should navigate the browser to.
    */
   buildAuthorizeUrl(userId: string, res: Response): string {
+    console.log("[buildAuthorizeUrl] start");
     const clientId = this.requireEnv("GITHUB_CLIENT_ID");
+    console.log("[buildAuthorizeUrl] after requireEnv clientId");
     this.requireEnv("GITHUB_CLIENT_SECRET");
+    console.log("[buildAuthorizeUrl] after requireEnv clientSecret");
     const redirectUri = this.requireEnv("GITHUB_REDIRECT_URI");
+    console.log("[buildAuthorizeUrl] after requireEnv redirectUri");
 
     const state = randomBytes(24).toString("hex");
+    console.log("[buildAuthorizeUrl] after randomBytes");
+
     this.setStateCookie(res, state, userId);
+    console.log("[buildAuthorizeUrl] after setStateCookie");
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -76,7 +83,11 @@ export class GithubService {
       scope: GITHUB_SCOPES,
       state,
     });
-    return `${GITHUB_AUTHORIZE_URL}?${params.toString()}`;
+    console.log("[buildAuthorizeUrl] after URLSearchParams");
+
+    const result = `${GITHUB_AUTHORIZE_URL}?${params.toString()}`;
+    console.log("[buildAuthorizeUrl] returning");
+    return result;
   }
 
   /**

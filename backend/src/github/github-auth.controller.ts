@@ -24,6 +24,7 @@ export class GithubAuthController {
   connect(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     console.log("[github-connect] handler entered");
     const url = this.githubService.buildAuthorizeUrl(req.authUser.id, res);
+    console.log("[github-connect] buildAuthorizeUrl returned");
     return { url };
   }
 
