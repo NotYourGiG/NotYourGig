@@ -19,7 +19,7 @@ export async function createApp(): Promise<INestApplication> {
     .filter(Boolean);
   app.enableCors(
     frontendUrls.length > 0
-      ? { origin: frontendUrls }
+      ? { origin: frontendUrls, credentials: true }
       : { origin: true, credentials: true },
   );
 

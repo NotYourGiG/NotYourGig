@@ -140,7 +140,9 @@ export default function ProfilePage() {
     setError(null)
     setGithubMessage(null)
     try {
-      const d = await api<{ url: string }>("/auth/github/connect")
+      const d = await api<{ url: string }>("/auth/github/connect", {
+        credentials: "include",
+      })
       window.location.href = d.url
       // component will be unloaded on redirect; reset for safety if not
       setConnecting(false)

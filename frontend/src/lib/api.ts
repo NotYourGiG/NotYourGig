@@ -47,6 +47,13 @@ interface ApiOptions {
   body?: unknown
   /** Explicit token override; omit to use the registered provider. */
   token?: string | null
+  /**
+   * Cross-origin cookie policy for this call. Default is "same-origin".
+   * Set to "include" when the backend must be able to Set-Cookie on this
+   * response (e.g. the GitHub connect state cookie), which is otherwise
+   * silently dropped by the browser for cross-origin fetch.
+   */
+  credentials?: RequestCredentials
 }
 
 export async function api<T>(path: string, opts: ApiOptions = {}): Promise<T> {
@@ -61,6 +68,7 @@ export async function api<T>(path: string, opts: ApiOptions = {}): Promise<T> {
     method: opts.method ?? "GET",
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    credentials: opts.credentials,
   })
 
   if (!res.ok) {
