@@ -1,8 +1,9 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { Response } from "express";
 import { SupabaseService } from "../supabase/supabase.service";
+import { OauthStateProvider } from "../providers/oauth-state.provider";
 
 // ---------------------------------------------------------------------------
 // GitHub proof-of-work verification (separate from Clerk auth).
@@ -10,10 +11,13 @@ import { SupabaseService } from "../supabase/supabase.service";
 // Flow (Vercel "connect GitHub after signup"-style, but triggered from the
 // user's own dashboard/profile):
 //   GET /api/auth/github/connect  (Clerk-guarded) ->
-//     builds github.com OAuth authorize URL,
-//     sets a signed HttpOnly state cookie binding clerk user -> state
+//     builds the github.com OAuth authorize URL + a one-time random state,
+//     persists state -> user_id (TTL) in Supabase `oauth_state`,
+//     returns { url, state_token } so the frontend can pass the state
+//     through the OAuth roundtrip (GitHub echoes `state` back to the
+//     callback) without needing a browser cookie.
 //   GET /api/auth/github/callback (browser redirect from GitHub) ->
-//     verifies the state cookie + GitHub `state` query param,
+//     looks up + consumes the state server-side (single-use, TTL-bound),
 //     exchanges the code for an access token,
 //     fetches the user's public repos *once*,
 //     extracts each repo's primary language,
@@ -21,18 +25,23 @@ import { SupabaseService } from "../supabase/supabase.service";
 //     the curated `skills` table (exact name match only) AND appear as the
 //     primary language in >= 2 owned, non-forked public repos
 //     (a single one-off repo is not proficiency).
+//     302s the browser to the frontend with ?github=verified|none|error.
 //
-// Token lifecycle: the access token is held in a local variable for the
-// duration of this one callback request and discarded immediately — it is
-// NEVER written to the database (no live sync planned).
+// Token lifecycle: the GitHub access token is held only in a local variable
+// for the duration of this one callback request and discarded immediately —
+// it is NEVER written to the database (no live sync planned).
+//
+// NOTE: We intentionally avoid state cookies. Browsers (Chrome/Edge/Safari/
+// Firefox 2024+) drop Set-Cookie on cross-origin fetch() responses even with
+// credentials:"include" + SameSite=None; Secure, so a cookie never survived
+// the connect -> github.com -> callback chain. Server-side state (Supabase)
+// is the robust fix.
 // ---------------------------------------------------------------------------
 
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const GITHUB_API_BASE = "https://api.github.com";
 const GITHUB_SCOPES = "read:user public_repo";
-const STATE_COOKIE = "nyg_gh_state";
-const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const REPOS_PER_PAGE = 100;
 const REPOS_MAX_PAGES = 10;
 const MIN_REPOS_FOR_VERIFICATION = 2;
@@ -47,7 +56,12 @@ interface GithubRepo {
 export interface GithubCallbackInput {
   code: string | null;
   state: string | null;
-  cookieValue: string | null;
+}
+
+export interface GithubAuthorizeResult {
+  url: string;
+  /** One-time state token the frontend forwards through the OAuth roundtrip. */
+  state_token: string;
 }
 
 @Injectable()
@@ -55,20 +69,22 @@ export class GithubService {
   constructor(
     private readonly config: ConfigService,
     private readonly supabase: SupabaseService,
+    private readonly oauthState: OauthStateProvider,
   ) {}
 
   /**
    * Build the GitHub authorize URL for the given (authenticated) user and
-   * bind them to a random OAuth state via a signed, HttpOnly cookie.
-   * Returns the URL the frontend should navigate the browser to.
+   * persist the state server-side, bound to that user. Returns the URL plus
+   * the one-time state token the frontend should carry through the OAuth
+   * roundtrip (GitHub echoes `state` back on the callback) — no cookie.
    */
-  buildAuthorizeUrl(userId: string, res: Response): string {
+  async buildAuthorizeUrl(userId: string): Promise<GithubAuthorizeResult> {
     const clientId = this.requireEnv("GITHUB_CLIENT_ID");
     this.requireEnv("GITHUB_CLIENT_SECRET");
     const redirectUri = this.requireEnv("GITHUB_REDIRECT_URI");
 
     const state = randomBytes(24).toString("hex");
-    this.setStateCookie(res, state, userId);
+    await this.oauthState.create(userId, state);
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -76,7 +92,7 @@ export class GithubService {
       scope: GITHUB_SCOPES,
       state,
     });
-    return `${GITHUB_AUTHORIZE_URL}?${params.toString()}`;
+    return { url: `${GITHUB_AUTHORIZE_URL}?${params.toString()}`, state_token: state };
   }
 
   /**
@@ -85,15 +101,17 @@ export class GithubService {
    * page keeps working.
    */
   async handleCallback(input: GithubCallbackInput, res: Response): Promise<void> {
-    this.clearStateCookie(res);
-
-    const userId = this.verifyState(input.state, input.cookieValue);
-    if (!userId || !input.code) {
+    if (!input.code) {
       this.redirect(res, "error");
       return;
     }
-
     try {
+      // Consume the one-time state server-side (also enforces the TTL).
+      const userId = await this.oauthState.consume(input.state ?? "");
+      if (!userId) {
+        this.redirect(res, "error");
+        return;
+      }
       const token = await this.exchangeCode(input.code);
       if (!token) {
         this.redirect(res, "error");
@@ -241,64 +259,7 @@ export class GithubService {
     if (error) throw new Error(`github: users update -> ${error.message}`);
   }
 
-  // ---- private: state cookie -------------------------
-
-  private setStateCookie(res: Response, state: string, userId: string): void {
-    const exp = Date.now() + STATE_TTL_MS;
-    const body = `${state}|${userId}|${exp}`;
-    const sig = createHmac("sha256", this.stateSecret()).update(body).digest("base64url");
-    const value = encodeURIComponent(`${body}|${sig}`);
-    res.setHeader("Set-Cookie", [
-      `${STATE_COOKIE}=${value}`,
-      "Path=/",
-      "HttpOnly",
-      "SameSite=None", // held across the cross-origin redirect chain (backend -> github.com -> backend)
-      "Secure",        // required by browsers for SameSite=None (and the callback is HTTPS)
-      `Max-Age=${Math.floor(STATE_TTL_MS / 1000)}`,
-    ].join("; "));
-  }
-
-  /** Verify the cookie was issued for this exact state+user and has not expired. */
-  private verifyState(state: string | null, cookieValue: string | null): string | null {
-    if (!state || !cookieValue) return null;
-    let parts: string[];
-    try {
-      parts = decodeURIComponent(cookieValue).split("|");
-    } catch {
-      return null;
-    }
-    if (parts.length !== 4) return null;
-    const [cookieState, userId, expRaw, signature] = parts;
-    if (cookieState !== state || !userId) return null;
-    const exp = Number(expRaw);
-    if (!Number.isFinite(exp) || exp < Date.now()) return null;
-
-    const body = `${cookieState}|${userId}|${expRaw}`;
-    const expected = createHmac("sha256", this.stateSecret()).update(body).digest("base64url");
-    const a = Buffer.from(signature);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-    return userId;
-  }
-
-  private clearStateCookie(res: Response): void {
-    res.setHeader(
-      "Set-Cookie",
-      `${STATE_COOKIE}=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0`,
-    );
-  }
-
-  private stateSecret(): string {
-    const explicit = this.config.get<string>("GITHUB_STATE_SECRET");
-    if (explicit?.trim()) return explicit.trim();
-    const fallback = this.config.get<string>("GITHUB_CLIENT_SECRET");
-    if (!fallback?.trim()) {
-      throw new ServiceUnavailableException(
-        "GitHub OAuth is not configured: GITHUB_CLIENT_SECRET or GITHUB_STATE_SECRET is missing",
-      );
-    }
-    return fallback.trim();
-  }
+  // ---- private: env -----------------------------------
 
   private requireEnv(name: string): string {
     const value = this.config.get<string>(name);

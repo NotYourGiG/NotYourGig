@@ -140,9 +140,13 @@ export default function ProfilePage() {
     setError(null)
     setGithubMessage(null)
     try {
-      const d = await api<{ url: string }>("/auth/github/connect", {
-        credentials: "include",
-      })
+      const d = await api<{ url: string; state_token: string }>("/auth/github/connect")
+      // Keep the one-time state token in this tab's sessionStorage so the
+      // profile can correlate the OAuth roundtrip; it is NOT used for CSRF
+      // on its own (the backend verifies + consumes it server-side on the
+      // callback via GitHub's `state` echo). Storing it is harmless and
+      // keeps the connect metadata available if needed after navigation.
+      sessionStorage.setItem("nyg_gh_state_token", d.state_token)
       window.location.href = d.url
       // component will be unloaded on redirect; reset for safety if not
       setConnecting(false)
