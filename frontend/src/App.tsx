@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom"
 import AppLayout from "./components/AppLayout"
 import DashboardLayout from "./components/DashboardLayout"
 import RequireAuth from "./components/RequireAuth"
+import RequireGithub from "./components/RequireGithub"
 import PlaceholderPage from "./pages/PlaceholderPage"
 import LandingPage from "./pages/LandingPage"
 import SignInPage from "./pages/SignInPage"
@@ -37,7 +38,9 @@ export default function App() {
           path="/projects/new"
           element={
             <RequireAuth>
-              <PostProjectPage />
+              <RequireGithub>
+                <PostProjectPage />
+              </RequireGithub>
             </RequireAuth>
           }
         />
