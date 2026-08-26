@@ -2,16 +2,29 @@ import { Link, Navigate } from "react-router-dom"
 import { Card, Loading } from "../../components/ui"
 import { useCurrentUser } from "../../lib/user-context"
 
-const cards = [
-  { to: "/projects?type=paid", label: "Find Internship" },
-  { to: "/projects?poster=org", label: "Find Talent" },
-  { to: "/builders", label: "Find a Builder" },
+const rows = [
+  {
+    to: "/projects?type=paid",
+    title: "Find Internship",
+    description: "Browse open opportunities",
+  },
+  {
+    to: "/projects?poster=org",
+    title: "Find Talent",
+    description: "Search builders by proof",
+  },
+  {
+    to: "/builders",
+    title: "Find a Builder",
+    description: "Connect with collaborators",
+  },
 ]
 
-// Dashboard home (blueprint §5) — three entry cards, same visual style as the
-// landing page's entry cards. Only reachable once GitHub is connected: the
-// mandatory-GitHub gate lives in DashboardLayout, so this page renders only
-// when user.github_connected_at is set (the guard here is a backstop).
+// Dashboard home — three stacked entry rows. Each row: a flat chevron icon on
+// the left, bold title, one-line description. Vertical stack (not side-by-side
+// cards) so the page fills the space better while staying flat/minimal per the
+// brand guidelines. Only reachable once GitHub is connected (the mandatory
+// gate lives in DashboardLayout; the check here is a backstop).
 export default function DashboardHomePage() {
   const { user, loading } = useCurrentUser()
 
@@ -21,14 +34,33 @@ export default function DashboardHomePage() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {cards.map((c) => (
-        <Link key={c.to} to={c.to} className="group block">
-          <Card className="flex h-full items-center justify-between transition-colors group-hover:border-ring">
-            <h2 className="text-base font-semibold">{c.label}</h2>
-            <span className="text-sm text-muted-foreground" aria-hidden="true">
-              →
+    <div className="space-y-4">
+      {rows.map((r) => (
+        <Link key={r.to} to={r.to} className="group block">
+          <Card className="flex items-center gap-4 px-6 py-6 transition-colors group-hover:border-ring">
+            {/* Flat chevron mark — minimal, no gradients; matches the
+                chevron-icon branding direction. */}
+            <span
+              aria-hidden="true"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m9 6 6 6-6 6" />
+              </svg>
             </span>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">{r.title}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">{r.description}</p>
+            </div>
           </Card>
         </Link>
       ))}
