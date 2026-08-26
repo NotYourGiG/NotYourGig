@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -71,6 +72,19 @@ export class UsersController {
   ) {
     this.assertOwner(req.authUser.id, id);
     await this.usersService.addProof(id, body);
+    return { proof: await this.usersService.listProof(id) };
+  }
+
+  /** DELETE /users/:id/proof/:proofId — owner only. */
+  @UseGuards(ClerkAuthGuard)
+  @Delete(":id/proof/:proofId")
+  async deleteProof(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Param("proofId", ParseUUIDPipe) proofId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    this.assertOwner(req.authUser.id, id);
+    await this.usersService.deleteProof(id, proofId);
     return { proof: await this.usersService.listProof(id) };
   }
 

@@ -130,6 +130,17 @@ export class UsersService {
     return data;
   }
 
+  /** Delete one of the user's proof entries. No-op if the row doesn't exist. */
+  async deleteProof(userId: string, proofId: string) {
+    const { error } = await this.supabase
+      .getClient()
+      .from("proof_of_work")
+      .delete()
+      .eq("id", proofId)
+      .eq("user_id", userId);
+    if (error) throw new Error(`DB error: ${error.message}`);
+  }
+
   /** Curated skills list search (blueprint §6: pick from the table, no free text). */
   async searchSkills(q?: string) {
     const client = this.supabase.getClient();

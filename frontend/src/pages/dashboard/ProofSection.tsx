@@ -28,6 +28,23 @@ export default function ProofSection({
 }) {
   const [form, setForm] = useState(emptyProof)
   const [adding, setAdding] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function deleteProof(entryId: string) {
+    if (!window.confirm("Delete this proof of work entry?")) return
+    setDeletingId(entryId)
+    try {
+      const d = await api<{ proof: ProofEntry[] }>(
+        `/users/${user.id}/proof/${entryId}`,
+        { method: "DELETE" },
+      )
+      onUpdate(d.proof)
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Failed to delete proof")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   async function addProof() {
     if (!form.title.trim()) return
@@ -60,7 +77,19 @@ export default function ProofSection({
         {profile?.proof.length ? (
           profile.proof.map((p) => (
             <div key={p.id} className="rounded-md border border-border bg-card p-3">
-              <p className="text-sm font-medium">{p.title}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-medium">{p.title}</p>
+                <button
+                  type="button"
+                  onClick={() => deleteProof(p.id)}
+                  disabled={deletingId === p.id}
+                  aria-label="Delete proof entry"
+                  title="Delete"
+                  className="shrink-0 rounded p-1 text-sm leading-none text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                >
+                  {deletingId === p.id ? "…" : "✕"}
+                </button>
+              </div>
               {p.role_played ? (
                 <p className="mt-1 text-xs text-muted-foreground">Role: {p.role_played}</p>
               ) : null}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useCurrentUser } from "../../lib/user-context"
 import { api } from "../../lib/api"
 import {
@@ -19,6 +20,7 @@ import ProofSection from "./ProofSection"
 // add Proof of Work entries.
 export default function ProfilePage() {
   const { user, loading, refresh } = useCurrentUser()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<Profile | null>(null)
 
   const [headline, setHeadline] = useState("")
@@ -340,6 +342,16 @@ export default function ProfilePage() {
           onError={(msg) => setError(msg)}
         />
       ) : null}
+
+      {/* "I'm done, take me forward." Profile fields are saved individually
+          (Save / Add skill / Add proof); this is just navigation to the
+          3-category dashboard home. If GitHub isn't connected yet, the
+          mandatory gate in DashboardLayout redirects back here. */}
+      <div className="pt-2">
+        <Button onClick={() => navigate("/dashboard")}>
+          Save &amp; Continue to Dashboard
+        </Button>
+      </div>
     </div>
   )
 }
