@@ -170,6 +170,18 @@ export default function ProfilePage() {
           {error}
         </p>
       ) : null}
+
+      {/* Mandatory GitHub connect: until github_connected_at is set, this is
+          the only dashboard page available (DashboardLayout redirects every
+          other dashboard route here) and the Skills section shows Connect. */}
+      {user && !user.github_connected_at ? (
+        <div className="rounded-md border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
+          <p className="font-medium">
+            Connect your GitHub to continue — this is how we verify real work
+            on NotYourGig.
+          </p>
+        </div>
+      ) : null}
       <Card>
         <h2 className="mb-4 text-sm font-semibold">Basics</h2>
         <div className="grid gap-4 sm:grid-cols-2">

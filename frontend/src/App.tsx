@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom"
+import { Route, Routes } from "react-router-dom"
 import AppLayout from "./components/AppLayout"
 import DashboardLayout from "./components/DashboardLayout"
 import RequireAuth from "./components/RequireAuth"
@@ -11,6 +11,7 @@ import BrowseProjectsPage from "./pages/BrowseProjectsPage"
 import PostProjectPage from "./pages/PostProjectPage"
 import ProjectDetailPage from "./pages/ProjectDetailPage"
 import ProfilePage from "./pages/dashboard/ProfilePage"
+import DashboardHomePage from "./pages/dashboard/DashboardHomePage"
 import MyProjectsPage from "./pages/dashboard/MyProjectsPage"
 import MyApplicationsPage from "./pages/dashboard/MyApplicationsPage"
 
@@ -49,7 +50,9 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/dashboard/profile" replace />} />
+          {/* Dashboard home = 3 category cards. Reachable only once GitHub
+              is connected (mandatory gate in DashboardLayout). */}
+          <Route index element={<DashboardHomePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="projects" element={<MyProjectsPage />} />
           <Route path="applications" element={<MyApplicationsPage />} />
