@@ -4,6 +4,7 @@ import DashboardLayout from "./components/DashboardLayout"
 import RequireAuth from "./components/RequireAuth"
 import RequireGithub from "./components/RequireGithub"
 import PlaceholderPage from "./pages/PlaceholderPage"
+import { Input } from "./components/ui"
 import LandingPage from "./pages/LandingPage"
 import SignInPage from "./pages/SignInPage"
 import SignUpPage from "./pages/SignUpPage"
@@ -30,7 +31,17 @@ export default function App() {
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/projects" element={<BrowseProjectsPage />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-        <Route path="/builders" element={<PlaceholderPage title="Explore Builders" />} />
+        <Route path="/builders" element={<PlaceholderPage title="Explore Builders"
+            topContent={
+              <Input
+                type="search"
+                placeholder="Search builders by skill or name..."
+                className="h-11 text-base font-semibold"
+                aria-label="Search builders by skill or name"
+              />
+            }
+          />
+        } />
         <Route path="/builders/:userId" element={<BuilderProfilePage />} />
 
         {/* Authenticated */}
