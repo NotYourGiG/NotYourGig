@@ -245,7 +245,13 @@ export default function ProjectDetailPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-medium">
-                        {a.applicant?.name ?? "Applicant"} · {a.project_role?.skill?.name ?? "Role"}
+                        {a.applicant ? (
+                          <Link to={`/builders/${a.applicant.id}`} className="underline">
+                            {a.applicant.name}
+                          </Link>
+                        ) : (
+                          "Applicant"
+                        )}{" "}· {a.project_role?.skill?.name ?? "Role"}
                       </p>
                       {a.pitch_note ? (
                         <p className="mt-1 text-sm text-muted-foreground">{a.pitch_note}</p>
