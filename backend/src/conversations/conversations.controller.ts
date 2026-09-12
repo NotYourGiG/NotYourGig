@@ -44,19 +44,14 @@ export class ConversationsController {
     };
   }
 
-  /** GET /conversations/:id/messages — one thread, oldest first. */
+  /** GET /conversations/:id/messages — one thread, oldest first (+ receipts). */
   @UseGuards(ClerkAuthGuard)
   @Get(":id/messages")
   async messages(
     @Param("id", ParseUUIDPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return {
-      messages: await this.conversationsService.listMessages(
-        id,
-        req.authUser.id,
-      ),
-    };
+    return this.conversationsService.listMessages(id, req.authUser.id);
   }
 
   /** POST /conversations/:id/messages — append a message ({ content }). */

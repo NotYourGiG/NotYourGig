@@ -30,6 +30,9 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[] | null>(null)
   const [active, setActive] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<ChatMessage[] | null>(null)
+  // The other participant's last_read_at from the active conversation's
+  // messages fetch — drives the "Seen"/"Delivered" label on my sent messages.
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null)
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -64,9 +67,13 @@ export default function ChatPage() {
     }
     let cancelled = false
     setMessages(null)
-    api<{ messages: ChatMessage[] }>(`/conversations/${active.id}/messages`)
+    setOtherLastReadAt(null)
+    api<{ messages: ChatMessage[]; last_read_at: string | null }>(`/conversations/${active.id}/messages`)
       .then((d) => {
-        if (!cancelled) setMessages(d.messages)
+        if (!cancelled) {
+          setMessages(d.messages)
+          setOtherLastReadAt(d.last_read_at)
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -213,6 +220,13 @@ export default function ChatPage() {
                     ) : (
                       messages.map((m) => {
                         const mine = m.sender_id === user?.id
+                        // WhatsApp-style receipt: a sent message counts as
+                        // "Seen" once the other participant's last_read_at is
+                        // at or past this message's timestamp.
+                        const receipt =
+                          otherLastReadAt && new Date(m.created_at) <= new Date(otherLastReadAt)
+                            ? "Seen"
+                            : "Delivered"
                         return (
                           <div
                             key={m.id}
@@ -225,7 +239,13 @@ export default function ChatPage() {
                           >
                             {!mine ? <p className="text-[10px] text-muted-foreground">{m.sender?.name ?? "User"}</p> : null}
                             <p className="whitespace-pre-wrap">{m.content}</p>
-                            <p className="text-[10px] text-muted-foreground">{formatTime(m.created_at)}</p>
+                            {mine ? (
+                              <p className="text-right text-[10px] text-muted-foreground">
+                                {formatTime(m.created_at)} · {receipt}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground">{formatTime(m.created_at)}</p>
+                            )}
                           </div>
                         )
                       })

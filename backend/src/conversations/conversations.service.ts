@@ -140,17 +140,48 @@ export class ConversationsService {
     };
   }
 
-  /** Messages of one conversation, oldest first — participants only. */
+  /**
+   * Messages of one conversation, oldest first — participants only. Also
+   * records this read (last_read_at on the caller's participant row) and
+   * returns the other participant's last_read_at so the frontend can render
+   * "Seen"/"Delivered" on the caller's own sent messages.
+   */
   async listMessages(conversationId: string, authUserId: string) {
-    await this.assertCanAccess(conversationId, authUserId);
-    const { data, error } = await this.supabase
-      .getClient()
+    const client = this.supabase.getClient();
+
+    const { data: participants, error: pErr } = await client
+      .from("conversation_participants")
+      .select("conversation_id, user_id, last_read_at")
+      .eq("conversation_id", conversationId);
+    if (pErr) throw new Error(`DB error: ${pErr.message}`);
+    const rows = participants ?? [];
+    if (!rows.some((r) => r.user_id === authUserId)) {
+      throw new NotFoundException("Conversation not found");
+    }
+    const other = rows.find((r) => r.user_id !== authUserId);
+
+    // Best-effort read marker: a failure here must never block the thread.
+    const { error: readErr } = await client
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .eq("user_id", authUserId);
+    if (readErr) {
+      console.error(
+        `[conversations] failed to update last_read_at: ${readErr.message}`,
+      );
+    }
+
+    const { data, error } = await client
       .from("messages")
       .select(SENDER_SELECT)
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
     if (error) throw new Error(`DB error: ${error.message}`);
-    return data ?? [];
+    return {
+      messages: data ?? [],
+      last_read_at: other?.last_read_at ?? null,
+    };
   }
 
   /** Append a message to a conversation and bump its activity timestamp. */
