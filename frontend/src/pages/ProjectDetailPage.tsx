@@ -113,6 +113,16 @@ export default function ProjectDetailPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold">Overview</h2>
         <p className="whitespace-pre-wrap text-sm text-muted-foreground">{project.description}</p>
+        {project.repo_url ? (
+          <a
+            href={project.repo_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-block text-sm font-medium underline"
+          >
+            View on GitHub
+          </a>
+        ) : null}
       </div>
 
       {submitMsg ? (

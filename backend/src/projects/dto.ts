@@ -47,6 +47,10 @@ export class CreateProjectDto {
   budget_currency?: string;
 
   @IsOptional()
+  @IsString()
+  repo_url?: string;
+
+  @IsOptional()
   @IsUUID()
   posted_by_user_id?: string;
 
@@ -86,4 +90,8 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsIn(["open", "in_progress", "completed", "cancelled"])
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  repo_url?: string;
 }

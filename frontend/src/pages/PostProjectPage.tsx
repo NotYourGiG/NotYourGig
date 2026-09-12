@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { api } from "../lib/api"
 import { useCurrentUser } from "../lib/user-context"
@@ -6,12 +6,24 @@ import { Button, Card, Input, Label, Select, Textarea } from "../components/ui"
 import type { Project, Skill } from "../lib/types"
 
 interface RoleDraft {
+  /** Stable per-row id so each RoleEditor keeps its own editable state. */
+  id: string
   skill: Skill | null
   seniority: string
   headcount: number
 }
 
-const emptyRole = (): RoleDraft => ({ skill: null, seniority: "any", headcount: 1 })
+const newId = (): string =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`
+
+const emptyRole = (): RoleDraft => ({
+  id: newId(),
+  skill: null,
+  seniority: "any",
+  headcount: 1,
+})
 
 // Post a Project (flow 4.2): title, description, type, optional budget,
 // one or more roles. Posted as the current user (orgs are deferred).
@@ -20,6 +32,7 @@ export default function PostProjectPage() {
   const navigate = useNavigate()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [repoUrl, setRepoUrl] = useState("")
   const [type, setType] = useState("unpaid")
   const [budget, setBudget] = useState("")
   const [currency, setCurrency] = useState("INR")
@@ -45,6 +58,7 @@ export default function PostProjectPage() {
           type,
           budget_amount: type === "paid" && budget ? Number(budget) : undefined,
           budget_currency: currency,
+          repo_url: repoUrl.trim() || undefined,
           posted_by_user_id: user.id,
           roles: cleanRoles.map((r) => ({
             skill_id: r.skill!.id,
@@ -89,6 +103,14 @@ export default function PostProjectPage() {
             <Label>Description</Label>
             <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you building, and what does success look like?" />
           </div>
+          <div>
+            <Label>GitHub Repo URL</Label>
+            <Input
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              placeholder="https://github.com/owner/repo (optional)"
+            />
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <Label>Type</Label>
@@ -124,7 +146,7 @@ export default function PostProjectPage() {
         <div className="space-y-4">
           {roles.map((role, index) => (
             <RoleEditor
-              key={index}
+              key={role.id}
               role={role}
               index={index}
               onChange={updateRole}
@@ -161,16 +183,26 @@ function RoleEditor({
   onChange: (index: number, patch: Partial<RoleDraft>) => void
   onRemove: (index: number) => void
 }) {
-  const [query, setQuery] = useState("")
+  // The skill text field is freely editable (select-all/backspace/clear and
+  // retype) at any point, and keeps giving fresh suggestions whenever the
+  // query changes. `query` is the single source for the input value: it
+  // starts from the current selection and is only changed by typing here or
+  // picking a suggestion. Rows are keyed by a stable per-role id, so an
+  // editor component is never reused for a different role — that makes a
+  // resync effect unnecessary (and such an effect would clobber the user's
+  // typed text the moment a stale selection is cleared below).
+  const [query, setQuery] = useState(role.skill?.name ?? "")
   const [results, setResults] = useState<Skill[]>([])
   const [searching, setSearching] = useState(false)
 
-  useEffect(() => {
-    setQuery(role.skill ? role.skill.name : "")
-  }, [role.skill])
-
   async function search(q: string) {
     setQuery(q)
+    // Typing over a previously selected skill drops it from the draft, so
+    // the field behaves like a normal text input — and submit can never
+    // send a stale skill that differs from what the user is looking at.
+    if (role.skill && q !== role.skill.name) {
+      onChange(index, { skill: null })
+    }
     if (!q.trim()) {
       setResults([])
       return
@@ -184,6 +216,12 @@ function RoleEditor({
     } finally {
       setSearching(false)
     }
+  }
+
+  function selectSkill(s: Skill) {
+    setQuery(s.name)
+    setResults([])
+    onChange(index, { skill: s })
   }
 
   return (
@@ -202,7 +240,7 @@ function RoleEditor({
         <div>
           <Label>Skill</Label>
           <Input
-            value={role.skill ? role.skill.name : query}
+            value={query}
             onChange={(e) => search(e.target.value)}
             placeholder="Search the curated skills…"
           />
@@ -212,10 +250,7 @@ function RoleEditor({
                 <li key={s.id}>
                   <button
                     type="button"
-                    onClick={() => {
-                      onChange(index, { skill: s })
-                      setResults([])
-                    }}
+                    onClick={() => selectSkill(s)}
                     className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
                   >
                     {s.name}

@@ -58,6 +58,8 @@ export interface Project {
   id: string
   title: string
   description: string
+  /** Optional GitHub repo link shown as a plain outbound link on the detail page. */
+  repo_url: string | null
   type: string
   budget_amount: number | null
   budget_currency: string | null
