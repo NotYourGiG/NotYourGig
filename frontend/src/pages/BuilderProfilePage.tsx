@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { api } from "../lib/api"
+import { normalizeUrl } from "../lib/utils"
 import { Badge, Card, EmptyState, Loading } from "../components/ui"
 import type { Profile } from "../lib/types"
 
@@ -21,12 +22,16 @@ export default function BuilderProfilePage() {
   if (notFound) return <EmptyState title="User not found" />
   if (!profile) return <Loading />
 
-  const links = (p: Profile["proof"][number]) =>
-    [
-      p.link_github && { href: p.link_github, label: "GitHub" },
-      p.link_live_demo && { href: p.link_live_demo, label: "Live demo" },
-      p.link_other && { href: p.link_other, label: "Link" },
+  const links = (p: Profile["proof"][number]) => {
+    const githubHref = normalizeUrl(p.link_github)
+    const demoHref = normalizeUrl(p.link_live_demo)
+    const otherHref = normalizeUrl(p.link_other)
+    return [
+      githubHref && { href: githubHref, label: "GitHub" },
+      demoHref && { href: demoHref, label: "Live demo" },
+      otherHref && { href: otherHref, label: "Link" },
     ].filter(Boolean) as Array<{ href: string; label: string }>
+  }
 
   return (
     <div className="space-y-8">

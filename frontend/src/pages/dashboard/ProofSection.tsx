@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { api } from "../../lib/api"
+import { normalizeUrl } from "../../lib/utils"
 import { Button, Card, Input, Label, Textarea } from "../../components/ui"
 import type { ProofEntry, Profile } from "../../lib/types"
 
@@ -75,7 +76,11 @@ export default function ProofSection({
       <h2 className="mb-3 text-sm font-semibold">Proof of Work</h2>
       <div className="mb-4 space-y-3">
         {profile?.proof.length ? (
-          profile.proof.map((p) => (
+          profile.proof.map((p) => {
+            const githubHref = normalizeUrl(p.link_github)
+            const demoHref = normalizeUrl(p.link_live_demo)
+            const otherHref = normalizeUrl(p.link_other)
+            return (
             <div key={p.id} className="rounded-md border border-border bg-card p-3">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-medium">{p.title}</p>
@@ -97,24 +102,25 @@ export default function ProofSection({
                 <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
               ) : null}
               <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                {p.link_github ? (
-                  <a href={p.link_github} target="_blank" rel="noreferrer" className="underline">
+                {githubHref ? (
+                  <a href={githubHref} target="_blank" rel="noreferrer" className="underline">
                     GitHub
                   </a>
                 ) : null}
-                {p.link_live_demo ? (
-                  <a href={p.link_live_demo} target="_blank" rel="noreferrer" className="underline">
+                {demoHref ? (
+                  <a href={demoHref} target="_blank" rel="noreferrer" className="underline">
                     Live demo
                   </a>
                 ) : null}
-                {p.link_other ? (
-                  <a href={p.link_other} target="_blank" rel="noreferrer" className="underline">
+                {otherHref ? (
+                  <a href={otherHref} target="_blank" rel="noreferrer" className="underline">
                     Link
                   </a>
                 ) : null}
               </div>
             </div>
-          ))
+            )
+          })
         ) : (
           <span className="text-sm text-muted-foreground">No proof yet.</span>
         )}
