@@ -33,6 +33,7 @@ export default function PostProjectPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [repoUrl, setRepoUrl] = useState("")
+  const [demoUrl, setDemoUrl] = useState("")
   const [type, setType] = useState("unpaid")
   const [budget, setBudget] = useState("")
   const [currency, setCurrency] = useState("INR")
@@ -59,6 +60,7 @@ export default function PostProjectPage() {
           budget_amount: type === "paid" && budget ? Number(budget) : undefined,
           budget_currency: currency,
           repo_url: repoUrl.trim() || undefined,
+          demo_url: demoUrl.trim() || undefined,
           posted_by_user_id: user.id,
           roles: cleanRoles.map((r) => ({
             skill_id: r.skill!.id,
@@ -109,6 +111,14 @@ export default function PostProjectPage() {
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
               placeholder="https://github.com/owner/repo (optional)"
+            />
+          </div>
+          <div>
+            <Label>Live Demo URL</Label>
+            <Input
+              value={demoUrl}
+              onChange={(e) => setDemoUrl(e.target.value)}
+              placeholder="https://yourapp.vercel.app (optional)"
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-3">

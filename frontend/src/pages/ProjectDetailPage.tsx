@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useAuth } from "@clerk/clerk-react"
 import { api } from "../lib/api"
+import { normalizeUrl } from "../lib/utils"
 import { useCurrentUser } from "../lib/user-context"
 import { Badge, Button, Card, EmptyState, Loading, Textarea } from "../components/ui"
 import type { Application, Project } from "../lib/types"
@@ -77,6 +78,13 @@ export default function ProjectDetailPage() {
       setSubmitMsg(e instanceof Error ? e.message : "Failed to update application")
     }
   }
+
+  // Normalize user-supplied links (prepend https:// when bare, e.g.
+  // "jokeverse-yb2z.vercel.app/") so they always render as external URLs
+  // that open in a new tab, never as relative paths on this origin.
+  const repoHref = normalizeUrl(project.repo_url)
+  const demoHref = normalizeUrl(project.demo_url)
+
   return (
     <div className="space-y-8">
       <div>
@@ -113,15 +121,19 @@ export default function ProjectDetailPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold">Overview</h2>
         <p className="whitespace-pre-wrap text-sm text-muted-foreground">{project.description}</p>
-        {project.repo_url ? (
-          <a
-            href={project.repo_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-block text-sm font-medium underline"
-          >
-            View on GitHub
-          </a>
+        {(repoHref || demoHref) ? (
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            {repoHref ? (
+              <a href={repoHref} target="_blank" rel="noreferrer" className="font-medium underline">
+                View on GitHub
+              </a>
+            ) : null}
+            {demoHref ? (
+              <a href={demoHref} target="_blank" rel="noreferrer" className="font-medium underline">
+                View Live Demo
+              </a>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

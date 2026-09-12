@@ -60,6 +60,8 @@ export interface Project {
   description: string
   /** Optional GitHub repo link shown as a plain outbound link on the detail page. */
   repo_url: string | null
+  /** Optional live demo link, shown next to the repo link on the detail page. */
+  demo_url: string | null
   type: string
   budget_amount: number | null
   budget_currency: string | null

@@ -51,6 +51,10 @@ export class CreateProjectDto {
   repo_url?: string;
 
   @IsOptional()
+  @IsString()
+  demo_url?: string;
+
+  @IsOptional()
   @IsUUID()
   posted_by_user_id?: string;
 
@@ -94,4 +98,8 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsString()
   repo_url?: string;
+
+  @IsOptional()
+  @IsString()
+  demo_url?: string;
 }

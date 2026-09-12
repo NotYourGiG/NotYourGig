@@ -19,6 +19,7 @@ export interface CreateProjectInput {
   title: string;
   description: string;
   repo_url?: string;
+  demo_url?: string;
   type: string;
   budget_amount?: number;
   budget_currency?: string;
@@ -32,7 +33,7 @@ export interface CreateProjectInput {
 }
 
 const PROJECT_SELECT = `
-  id, title, description, type, repo_url, budget_amount, budget_currency, status,
+  id, title, description, type, repo_url, demo_url, budget_amount, budget_currency, status,
   created_at, updated_at, posted_by_user_id, posted_by_org_id,
   posted_by_user:users!projects_posted_by_user_id_fkey(id, name, avatar_url, headline),
   posted_by_org:organizations!projects_posted_by_org_id_fkey(id, name),
@@ -112,6 +113,7 @@ export class ProjectsService {
         title: dto.title,
         description: dto.description,
         repo_url: dto.repo_url ?? null,
+        demo_url: dto.demo_url ?? null,
         type: dto.type,
         budget_amount: dto.budget_amount ?? null,
         budget_currency: dto.budget_currency ?? "INR",
@@ -143,6 +145,7 @@ export class ProjectsService {
       title?: string;
       description?: string;
       repo_url?: string;
+      demo_url?: string;
       type?: string;
       budget_amount?: number;
       budget_currency?: string;
