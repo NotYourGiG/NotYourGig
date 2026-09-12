@@ -6,6 +6,7 @@ import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { ApplicationsModule } from "./applications/applications.module";
+import { ConversationsModule } from "./conversations/conversations.module";
 import { GithubModule } from "./github/github.module";
 
 // Bootstrap + feature modules per blueprint.md Build Order.
@@ -20,6 +21,7 @@ import { GithubModule } from "./github/github.module";
     UsersModule,
     ProjectsModule,
     ApplicationsModule,
+    ConversationsModule,
     GithubModule,
   ],
   controllers: [HealthController],

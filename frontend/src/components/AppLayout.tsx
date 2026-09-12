@@ -81,6 +81,9 @@ export default function AppLayout() {
                 <Link to="/projects/new" className={linkClass}>
                   Post a Project
                 </Link>
+                <Link to="/chat" className={linkClass}>
+                  Chat
+                </Link>
                 <Link to="/dashboard/profile" className={linkClass}>
                   Dashboard
                 </Link>
@@ -148,6 +151,9 @@ export default function AppLayout() {
                 <>
                   <Link to="/projects/new" className={cn(linkClass, "rounded-md px-2 py-2 hover:bg-muted")}>
                     Post a Project
+                  </Link>
+                  <Link to="/chat" className={cn(linkClass, "rounded-md px-2 py-2 hover:bg-muted")}>
+                    Chat
                   </Link>
                   <Link to="/dashboard/profile" className={cn(linkClass, "rounded-md px-2 py-2 hover:bg-muted")}>
                     Dashboard

@@ -97,3 +97,28 @@ export interface Page<T> {
   page: number
   per_page: number
 }
+
+export interface ChatMessage {
+  id: string
+  conversation_id: string
+  sender_id: string
+  content: string
+  created_at: string
+  sender: Pick<User, "id" | "name" | "avatar_url" | "headline"> | null
+}
+
+export interface Conversation {
+  id: string
+  context_type: string | null
+  context_id: string | null
+  created_at: string
+  updated_at: string
+  other_user: Pick<User, "id" | "name" | "avatar_url" | "headline"> | null
+  last_message: {
+    id: string
+    conversation_id: string
+    sender_id: string
+    content: string
+    created_at: string
+  } | null
+}

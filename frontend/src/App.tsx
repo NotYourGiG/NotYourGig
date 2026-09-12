@@ -9,6 +9,7 @@ import LandingPage from "./pages/LandingPage"
 import SignInPage from "./pages/SignInPage"
 import SignUpPage from "./pages/SignUpPage"
 import BuilderProfilePage from "./pages/BuilderProfilePage"
+import ChatPage from "./pages/ChatPage"
 import BrowseProjectsPage from "./pages/BrowseProjectsPage"
 import PostProjectPage from "./pages/PostProjectPage"
 import ProjectDetailPage from "./pages/ProjectDetailPage"
@@ -77,7 +78,7 @@ export default function App() {
           path="/chat"
           element={
             <RequireAuth>
-              <PlaceholderPage title="Chat" />
+              <ChatPage />
             </RequireAuth>
           }
         />

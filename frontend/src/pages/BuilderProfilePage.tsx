@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { api } from "../lib/api"
+import { useCurrentUser } from "../lib/user-context"
 import { normalizeUrl } from "../lib/utils"
-import { Badge, Card, EmptyState, Loading } from "../components/ui"
-import type { Profile } from "../lib/types"
+import { Badge, Button, Card, EmptyState, Loading } from "../components/ui"
+import type { Conversation, Profile } from "../lib/types"
 
 // Public profile page per blueprint §5: header (name, headline, avatar,
 // location), skills (tagged, leveled), proof cards, availability status.
@@ -11,6 +12,26 @@ export default function BuilderProfilePage() {
   const { userId } = useParams<{ userId: string }>()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const { user } = useCurrentUser()
+  const navigate = useNavigate()
+  const [starting, setStarting] = useState(false)
+  const [messageError, setMessageError] = useState<string | null>(null)
+
+  async function startChat() {
+    if (!profile) return
+    setStarting(true)
+    setMessageError(null)
+    try {
+      const d = await api<{ conversation: Conversation }>("/conversations", {
+        method: "POST",
+        body: { user_id: profile.id },
+      })
+      navigate(`/chat?c=${d.conversation.id}`)
+    } catch (e) {
+      setMessageError(e instanceof Error ? e.message : "Failed to start a conversation")
+      setStarting(false)
+    }
+  }
 
   useEffect(() => {
     if (!userId) return
@@ -35,7 +56,7 @@ export default function BuilderProfilePage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xl font-semibold text-muted-foreground">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
@@ -52,7 +73,25 @@ export default function BuilderProfilePage() {
             <Badge>{profile.primary_role}</Badge>
           </div>
         </div>
+        {profile.id !== user?.id ? (
+          <div className="ml-auto shrink-0">
+            {user ? (
+              <Button variant="outline" onClick={startChat} disabled={starting}>
+                {starting ? "Starting…" : "Message"}
+              </Button>
+            ) : (
+              <Link
+                to="/sign-in"
+                className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Message
+              </Link>
+            )}
+          </div>
+        ) : null}
       </div>
+
+      {messageError ? <p className="mt-1 text-xs text-destructive">{messageError}</p> : null}
 
       {profile.bio ? (
         <div>
