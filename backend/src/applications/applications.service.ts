@@ -47,6 +47,23 @@ export class ApplicationsService {
       throw new BadRequestException("You already applied to this role");
     }
 
+    // Already an accepted member of the project? They cannot apply for a
+    // second role on the same project — block it here so a pending
+    // application the poster could never accept is never created in the
+    // first place. (Membership only exists after an acceptance, so any
+    // project_members row means "accepted member".)
+    const { data: alreadyMember } = await client
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", dto.project_id)
+      .eq("user_id", authUserId)
+      .maybeSingle();
+    if (alreadyMember) {
+      throw new BadRequestException(
+        "You cannot apply for another role in the same project",
+      );
+    }
+
     const { data, error } = await client
       .from("applications")
       .insert({
@@ -138,7 +155,9 @@ export class ApplicationsService {
       // compensate: revert the status so no member exists without acceptance
       await client.from("applications").update({ status: "pending" }).eq("id", applicationId);
       if (memberError.code === "23505") {
-        throw new BadRequestException("This user is already a member of the project");
+        throw new BadRequestException(
+          "This person is already a member of this project — they can't fill a second role",
+        );
       }
       throw new Error(`DB error: ${memberError.message}`);
     }
