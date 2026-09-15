@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -18,6 +19,16 @@ import { AddProofDto, AddSkillDto, UpdateProfileDto } from "./dto";
 @Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  /** GET /users — public builder directory (name/skill search, paginated). */
+  @Get()
+  async list(@Query() q: { q?: string; page?: string; per_page?: string }) {
+    return this.usersService.listBuilders(
+      q.q,
+      q.page ? Number(q.page) : undefined,
+      q.per_page ? Number(q.per_page) : undefined,
+    );
+  }
 
   /** GET /users/:id — public profile (user + skills + proof). */
   @Get(":id")
