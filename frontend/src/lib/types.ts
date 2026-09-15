@@ -98,6 +98,15 @@ export interface Page<T> {
   per_page: number
 }
 
+/** One row in the public Explore Builders directory (GET /users). */
+export interface BuilderSummary {
+  id: string
+  name: string
+  avatar_url: string | null
+  headline: string | null
+  skills: Skill[]
+}
+
 export interface ChatMessage {
   id: string
   conversation_id: string
