@@ -25,6 +25,25 @@ export class CreateRoleDto {
   headcount_needed?: number;
 }
 
+export class UpdateRoleDto {
+  /** Present for existing roles; absent for roles being added. */
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @IsUUID()
+  skill_id!: string;
+
+  @IsOptional()
+  @IsIn(["any", "junior", "mid", "senior"])
+  seniority?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  headcount_needed?: number;
+}
+
 export class CreateProjectDto {
   @IsString()
   @IsNotEmpty()
@@ -102,4 +121,11 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsString()
   demo_url?: string;
+
+  /** Full role set reconciliation: existing (with id), new (no id), omitted = delete. */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateRoleDto)
+  roles?: UpdateRoleDto[];
 }

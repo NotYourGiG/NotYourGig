@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -63,7 +64,16 @@ export class ProjectsController {
     @Body() dto: UpdateProjectDto,
   ) {
     await this.assertOwner(id, req.authUser.id);
-    return { project: await this.projectsService.update(id, dto) };
+    const { roles, ...fields } = dto;
+    return { project: await this.projectsService.update(id, fields, roles) };
+  }
+
+  @UseGuards(ClerkAuthGuard)
+  @Delete(":id")
+  async remove(@Param("id", ParseUUIDPipe) id: string, @Req() req: AuthenticatedRequest) {
+    await this.assertOwner(id, req.authUser.id);
+    await this.projectsService.delete(id);
+    return { ok: true };
   }
 
   @UseGuards(ClerkAuthGuard)
