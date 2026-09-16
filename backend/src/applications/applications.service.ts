@@ -13,7 +13,12 @@ export class ApplicationsService {
   /** Apply to a specific project_role (flow 4.3). */
   async create(
     authUserId: string,
-    dto: { project_id: string; project_role_id: string; pitch_note?: string },
+    dto: {
+      project_id: string;
+      project_role_id: string;
+      pitch_note: string;
+      relevant_work_url?: string;
+    },
   ) {
     const client = this.supabase.getClient();
 
@@ -70,7 +75,8 @@ export class ApplicationsService {
         project_id: dto.project_id,
         project_role_id: dto.project_role_id,
         applicant_user_id: authUserId,
-        pitch_note: dto.pitch_note ?? null,
+        pitch_note: dto.pitch_note,
+        relevant_work_url: dto.relevant_work_url ?? null,
         status: "pending",
       })
       .select()
@@ -85,7 +91,7 @@ export class ApplicationsService {
       .getClient()
       .from("applications")
       .select(
-        `id, project_id, project_role_id, pitch_note, status, created_at,
+        `id, project_id, project_role_id, pitch_note, relevant_work_url, status, created_at,
          project:projects!applications_project_id_fkey(id, title, type, status, posted_by_user_id),
          project_role:project_roles!applications_project_role_id_fkey(id, skill_id, seniority, skill:skills(name))`,
       )

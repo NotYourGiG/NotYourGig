@@ -418,7 +418,7 @@ export class ProjectsService {
       .getClient()
       .from("applications")
       .select(
-        `id, project_id, project_role_id, pitch_note, status, created_at,
+        `id, project_id, project_role_id, pitch_note, relevant_work_url, status, created_at,
          applicant_user_id,
          applicant:users!applications_applicant_user_id_fkey(id, name, avatar_url, headline),
          project_role:project_roles!applications_project_role_id_fkey(id, skill_id, seniority, skill:skills(name))`,

@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { IsIn, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
 import { ClerkAuthGuard, AuthenticatedRequest } from "../auth/clerk-auth.guard";
 import { ApplicationsService } from "./applications.service";
 
@@ -20,9 +20,16 @@ export class CreateApplicationDto {
   @IsUUID()
   project_role_id!: string;
 
+  /** Required "why are you a good fit" pitch (min length rules out one-word answers). */
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(20)
+  pitch_note!: string;
+
   @IsOptional()
   @IsString()
-  pitch_note?: string;
+  @MaxLength(500)
+  relevant_work_url?: string;
 }
 
 export class UpdateApplicationDto {
