@@ -5,9 +5,10 @@ import { useAuth } from "@clerk/clerk-react"
 import { api } from "../lib/api"
 import { cn, normalizeUrl } from "../lib/utils"
 import { useCurrentUser } from "../lib/user-context"
-import { Badge, Button, Card, EmptyState, Loading, Textarea } from "../components/ui"
+import { Badge, Button, Card, EmptyState, Loading } from "../components/ui"
+import ApplicationForm from "../components/ApplicationForm"
 import ProjectForm, { type ProjectFormRole, type ProjectFormValues } from "../components/ProjectForm"
-import type { Application, Project } from "../lib/types"
+import type { Application, Project, UserSkill } from "../lib/types"
 
 const TYPE_LABELS: Record<string, string> = {
   paid: "Paid",
@@ -26,10 +27,10 @@ export default function ProjectDetailPage() {
   const [notFound, setNotFound] = useState(false)
 
   const [applyingRoleId, setApplyingRoleId] = useState<string | null>(null)
-  const [pitch, setPitch] = useState("")
 
   const [applications, setApplications] = useState<Application[] | null>(null)
   const [editing, setEditing] = useState(false)
+  const [applicantSkills, setApplicantSkills] = useState<UserSkill[] | null>(null)
 
   // Small auto-dismissing toast (bottom corner) for action feedback — in
   // particular the "already a member" accept rejection and the apply-time
@@ -64,6 +65,19 @@ export default function ProjectDetailPage() {
       .then((d) => setApplications(d.applications))
       .catch(() => setApplications([]))
   }, [isPoster, projectId])
+
+  // Load the applicant's own skills when the apply form opens — drives the
+  // read-only "top skills" strip (existing public endpoint, no new fetch
+  // surface: the auth context has no skills array).
+  useEffect(() => {
+    if (!applyingRoleId || !user) {
+      setApplicantSkills(null)
+      return
+    }
+    api<{ skills: UserSkill[] }>(`/users/${user.id}/skills`)
+      .then((d) => setApplicantSkills(d.skills))
+      .catch(() => setApplicantSkills([]))
+  }, [applyingRoleId, user?.id])
 
   if (notFound) return <EmptyState title="Project not found" />
   if (!project) return <Loading />
@@ -129,26 +143,21 @@ export default function ProjectDetailPage() {
     )
   }
 
-  async function submitApplication(roleId: string) {
+  async function submitApplication(roleId: string, pitchNote: string, relevantWorkUrl: string) {
     if (!project) return
-    try {
-      await api("/applications", {
-        method: "POST",
-        body: {
-          project_id: project.id,
-          project_role_id: roleId,
-          pitch_note: pitch.trim() || undefined,
-        },
-      })
-      showToast("Application sent. Good luck!", "info")
-      setApplyingRoleId(null)
-      setPitch("")
-    } catch (e) {
-      // e.g. 400 "You cannot apply for another role in the same project"
-      // or "You already applied to this role" — surfaced as a toast so a
-      // rejection never looks like a silent failure.
-      showToast(e instanceof Error ? e.message : "Failed to apply")
-    }
+    // Throws on error (e.g. the API-level min-length or already-applied
+    // rejections) — the ApplicationForm surfaces the message inline.
+    await api("/applications", {
+      method: "POST",
+      body: {
+        project_id: project.id,
+        project_role_id: roleId,
+        pitch_note: pitchNote,
+        relevant_work_url: relevantWorkUrl || undefined,
+      },
+    })
+    showToast("Application sent. Good luck!", "info")
+    setApplyingRoleId(null)
   }
 
   async function decideApplication(appId: string, status: "accepted" | "rejected") {
@@ -270,22 +279,15 @@ export default function ProjectDetailPage() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {r.headcount_filled}/{r.headcount_needed} filled
                 </p>
-                {isLoaded && isSignedIn && project.status === "open" && !isPoster && !full ? (
+                {isLoaded && isSignedIn && user && project.status === "open" && !isPoster && !full ? (
                   applyingRoleId === r.id ? (
-                    <div className="mt-3 space-y-2">
-                      <Textarea
-                        rows={3}
-                        value={pitch}
-                        onChange={(e) => setPitch(e.target.value)}
-                        placeholder="Optional pitch: why you, and what you've built"
-                      />
-                      <div className="flex gap-2">
-                        <Button onClick={() => submitApplication(r.id)}>Send application</Button>
-                        <Button variant="ghost" onClick={() => { setApplyingRoleId(null); setPitch("") }}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
+                    <ApplicationForm
+                      user={user}
+                      roleSkill={r.skill}
+                      skills={applicantSkills ?? []}
+                      onSubmit={(pitchNote, relevantWorkUrl) => submitApplication(r.id, pitchNote, relevantWorkUrl)}
+                      onCancel={() => setApplyingRoleId(null)}
+                    />
                   ) : (
                     <Button
                       variant="outline"
@@ -315,39 +317,52 @@ export default function ProjectDetailPage() {
             <EmptyState title="No applications yet" />
           ) : (
             <div className="space-y-3">
-              {applications.map((a) => (
-                <Card key={a.id}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {a.applicant ? (
-                          <Link to={`/builders/${a.applicant.id}`} className="underline">
-                            {a.applicant.name}
-                          </Link>
-                        ) : (
-                          "Applicant"
-                        )}{" "}· {a.project_role?.skill?.name ?? "Role"}
-                      </p>
-                      {a.pitch_note ? (
-                        <p className="mt-1 text-sm text-muted-foreground">{a.pitch_note}</p>
-                      ) : null}
+              {applications.map((a) => {
+                const workHref = normalizeUrl(a.relevant_work_url)
+                return (
+                  <Card key={a.id}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {a.applicant ? (
+                            <Link to={`/builders/${a.applicant.id}`} className="underline">
+                              {a.applicant.name}
+                            </Link>
+                          ) : (
+                            "Applicant"
+                          )}{" "}· {a.project_role?.skill?.name ?? "Role"}
+                        </p>
+                        {a.pitch_note ? (
+                          <p className="mt-1 text-sm text-muted-foreground">{a.pitch_note}</p>
+                        ) : null}
+                        {workHref ? (
+                          <a
+                            href={workHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-flex text-xs text-muted-foreground underline"
+                          >
+                            Relevant work
+                          </a>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge>{a.status}</Badge>
+                        {a.status === "pending" ? (
+                          <>
+                            <Button variant="outline" onClick={() => decideApplication(a.id, "accepted")}>
+                              Accept
+                            </Button>
+                            <Button variant="ghost" onClick={() => decideApplication(a.id, "rejected")}>
+                              Reject
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge>{a.status}</Badge>
-                      {a.status === "pending" ? (
-                        <>
-                          <Button variant="outline" onClick={() => decideApplication(a.id, "accepted")}>
-                            Accept
-                          </Button>
-                          <Button variant="ghost" onClick={() => decideApplication(a.id, "rejected")}>
-                            Reject
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>

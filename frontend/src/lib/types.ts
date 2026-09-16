@@ -85,6 +85,7 @@ export interface Application {
   project_id: string
   project_role_id: string
   pitch_note: string | null
+  relevant_work_url: string | null
   status: string
   created_at: string
   applicant: Pick<User, "id" | "name" | "avatar_url" | "headline"> | null
