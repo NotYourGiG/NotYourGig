@@ -72,6 +72,23 @@ export default function BuilderProfilePage() {
             <Badge>{profile.availability_status}</Badge>
             <Badge>{profile.primary_role}</Badge>
           </div>
+          {profile.github_username ? (
+            <p className="mt-2 flex flex-wrap items-center gap-1 text-xs">
+              <a
+                href={`https://github.com/${profile.github_username}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center text-muted-foreground underline transition-colors hover:text-foreground"
+              >
+                https://github.com/{profile.github_username}
+              </a>
+              {profile.github_connected_at ? (
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                  ✓ verified
+                </span>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         {profile.id !== user?.id ? (
           <div className="ml-auto shrink-0">
