@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, useParams } from "react-router-dom"
+import { Pencil } from "lucide-react"
 import { useAuth } from "@clerk/clerk-react"
 import { api } from "../lib/api"
 import { cn, normalizeUrl } from "../lib/utils"
 import { useCurrentUser } from "../lib/user-context"
 import { Badge, Button, Card, EmptyState, Loading, Textarea } from "../components/ui"
+import ProjectForm, { type ProjectFormRole, type ProjectFormValues } from "../components/ProjectForm"
 import type { Application, Project } from "../lib/types"
 
 const TYPE_LABELS: Record<string, string> = {
@@ -27,6 +29,7 @@ export default function ProjectDetailPage() {
   const [pitch, setPitch] = useState("")
 
   const [applications, setApplications] = useState<Application[] | null>(null)
+  const [editing, setEditing] = useState(false)
 
   // Small auto-dismissing toast (bottom corner) for action feedback — in
   // particular the "already a member" accept rejection and the apply-time
@@ -64,6 +67,67 @@ export default function ProjectDetailPage() {
 
   if (notFound) return <EmptyState title="Project not found" />
   if (!project) return <Loading />
+
+  // Edit mode (poster only): the shared ProjectForm, pre-filled and with
+  // roles that have applicants locked (skill/seniority frozen, headcount
+  // increase-only, no remove).
+  if (editing) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div>
+          <h1 className="text-xl font-semibold">Edit Project</h1>
+          <p className="text-sm text-muted-foreground">
+            Update project details and roles. Roles with applicants are locked.
+          </p>
+        </div>
+        <ProjectForm
+          mode="edit"
+          submitLabel="Save changes"
+          initial={{
+            title: project.title,
+            description: project.description,
+            repoUrl: project.repo_url ?? "",
+            demoUrl: project.demo_url ?? "",
+            type: project.type,
+            status: project.status,
+            budget: "",
+            currency: "",
+          }}
+          initialRoles={project.roles.map((r) => ({
+            id: r.id,
+            skill: r.skill,
+            seniority: r.seniority,
+            headcount: r.headcount_needed,
+          }))}
+          lockedRoleIds={new Set(
+            project.roles.filter((r) => (r.applications_count ?? 0) > 0).map((r) => r.id),
+          )}
+          onCancel={() => setEditing(false)}
+          onSubmit={async (values: ProjectFormValues, roles: ProjectFormRole[]) => {
+            const d = await api<{ project: Project }>(`/projects/${project.id}`, {
+              method: "PATCH",
+              body: {
+                title: values.title,
+                description: values.description,
+                type: values.type,
+                status: values.status,
+                repo_url: values.repoUrl || null,
+                demo_url: values.demoUrl || null,
+                roles: roles.map((r) =>
+                  r.id
+                    ? { id: r.id, skill_id: r.skill!.id, seniority: r.seniority, headcount_needed: r.headcount }
+                    : { skill_id: r.skill!.id, seniority: r.seniority, headcount_needed: r.headcount },
+                ),
+              },
+            })
+            setProject(d.project)
+            setEditing(false)
+            showToast("Project updated", "info")
+          }}
+        />
+      </div>
+    )
+  }
 
   async function submitApplication(roleId: string) {
     if (!project) return
@@ -120,6 +184,17 @@ export default function ProjectDetailPage() {
             />
             <h1 className="text-2xl font-semibold">{project.title}</h1>
           </span>
+          {isPoster ? (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              aria-label="Edit project"
+              title="Edit project"
+              className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : null}
           <Badge>{TYPE_LABELS[project.type] ?? project.type}</Badge>
           <Badge>{project.status}</Badge>
         </div>

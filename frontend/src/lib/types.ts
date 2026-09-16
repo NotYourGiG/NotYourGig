@@ -52,6 +52,12 @@ export interface ProjectRole {
   headcount_needed: number
   headcount_filled: number
   skill: Skill | null
+  /**
+   * Live pending+accepted application count (present on the project detail
+   * response). Drives per-role edit locking — a role with >0 applicants is
+   * frozen except the slot total can be increased.
+   */
+  applications_count?: number
 }
 
 export interface Project {

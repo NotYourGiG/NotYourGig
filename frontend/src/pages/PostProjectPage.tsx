@@ -1,83 +1,41 @@
-import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { api } from "../lib/api"
 import { useCurrentUser } from "../lib/user-context"
-import { Button, Card, Input, Label, Select, Textarea } from "../components/ui"
-import type { Project, Skill } from "../lib/types"
+import ProjectForm, {
+  emptyProjectFormRole,
+  type ProjectFormRole,
+  type ProjectFormValues,
+} from "../components/ProjectForm"
+import type { Project } from "../lib/types"
 
-interface RoleDraft {
-  /** Stable per-row id so each RoleEditor keeps its own editable state. */
-  id: string
-  skill: Skill | null
-  seniority: string
-  headcount: number
-}
-
-const newId = (): string =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()}`
-
-const emptyRole = (): RoleDraft => ({
-  id: newId(),
-  skill: null,
-  seniority: "any",
-  headcount: 1,
-})
-
-// Post a Project (flow 4.2): title, description, type, optional budget,
-// one or more roles. Posted as the current user (orgs are deferred).
+// Post a Project (flow 4.2): reuses the shared ProjectForm — title,
+// description, type, optional budget, one or more roles.
 export default function PostProjectPage() {
   const { user } = useCurrentUser()
   const navigate = useNavigate()
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [repoUrl, setRepoUrl] = useState("")
-  const [demoUrl, setDemoUrl] = useState("")
-  const [type, setType] = useState("unpaid")
-  const [budget, setBudget] = useState("")
-  const [currency, setCurrency] = useState("INR")
-  const [roles, setRoles] = useState<RoleDraft[]>([emptyRole()])
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  async function submit() {
-    if (!user || !title.trim() || !description.trim()) return
-    const cleanRoles = roles.filter((r) => r.skill)
-    if (cleanRoles.length === 0) {
-      setError("Add at least one role with a skill")
-      return
-    }
-    setSubmitting(true)
-    setError(null)
-    try {
-      const d = await api<{ project: Project }>("/projects", {
-        method: "POST",
-        body: {
-          title: title.trim(),
-          description: description.trim(),
-          type,
-          budget_amount: type === "paid" && budget ? Number(budget) : undefined,
-          budget_currency: currency,
-          repo_url: repoUrl.trim() || undefined,
-          demo_url: demoUrl.trim() || undefined,
-          posted_by_user_id: user.id,
-          roles: cleanRoles.map((r) => ({
-            skill_id: r.skill!.id,
-            seniority: r.seniority,
-            headcount_needed: r.headcount,
-          })),
-        },
-      })
-      navigate(`/projects/${d.project.id}`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to post project")
-      setSubmitting(false)
-    }
-  }
-
-  function updateRole(index: number, patch: Partial<RoleDraft>) {
-    setRoles((rs) => rs.map((r, i) => (i === index ? { ...r, ...patch } : r)))
+  async function onSubmit(values: ProjectFormValues, roles: ProjectFormRole[]) {
+    if (!user) return
+    const d = await api<{ project: Project }>("/projects", {
+      method: "POST",
+      body: {
+        title: values.title,
+        description: values.description,
+        type: values.type,
+        budget_amount:
+          values.type === "paid" && values.budget ? Number(values.budget) : undefined,
+        budget_currency: values.currency,
+        repo_url: values.repoUrl || undefined,
+        demo_url: values.demoUrl || undefined,
+        posted_by_user_id: user.id,
+        roles: roles.map((r) => ({
+          skill_id: r.skill!.id,
+          seniority: r.seniority,
+          headcount_needed: r.headcount,
+        })),
+      },
+    })
+    navigate(`/projects/${d.project.id}`)
   }
 
   return (
@@ -89,212 +47,22 @@ export default function PostProjectPage() {
         </p>
       </div>
 
-      {error ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
-      <Card>
-        <div className="space-y-4">
-          <div>
-            <Label>Title</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Realtime dashboard for a fintech MVP" />
-          </div>
-          <div>
-            <Label>Description</Label>
-            <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you building, and what does success look like?" />
-          </div>
-          <div>
-            <Label>GitHub Repo URL</Label>
-            <Input
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="https://github.com/owner/repo (optional)"
-            />
-          </div>
-          <div>
-            <Label>Live Demo URL</Label>
-            <Input
-              value={demoUrl}
-              onChange={(e) => setDemoUrl(e.target.value)}
-              placeholder="https://yourapp.vercel.app (optional)"
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <Label>Type</Label>
-              <Select value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="equity">Equity</option>
-                <option value="learning">Learning collab</option>
-              </Select>
-            </div>
-            {type === "paid" ? (
-              <>
-                <div>
-                  <Label>Budget (in cents)</Label>
-                  <Input type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 50000" />
-                </div>
-                <div>
-                  <Label>Currency</Label>
-                  <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                    <option value="INR">INR</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                  </Select>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <h2 className="mb-3 text-sm font-semibold">Roles needed</h2>
-        <div className="space-y-4">
-          {roles.map((role, index) => (
-            <RoleEditor
-              key={role.id}
-              role={role}
-              index={index}
-              onChange={updateRole}
-              onRemove={(i) => setRoles((rs) => rs.filter((_, x) => x !== i))}
-            />
-          ))}
-          <Button variant="outline" onClick={() => setRoles((rs) => [...rs, emptyRole()])}>
-            Add another role
-          </Button>
-        </div>
-      </Card>
-
-      <Button
-        onClick={submit}
-        disabled={submitting || !title.trim() || !description.trim()}
-        className="w-full"
-      >
-        {submitting ? "Publishing…" : "Publish project"}
-      </Button>
-    </div>
-  )
-}
-// One role row editor: curated skill search (no free text), seniority,
-// headcount. onChange(index, patch) keeps the parent state as the source
-// of truth.
-function RoleEditor({
-  role,
-  index,
-  onChange,
-  onRemove,
-}: {
-  role: RoleDraft
-  index: number
-  onChange: (index: number, patch: Partial<RoleDraft>) => void
-  onRemove: (index: number) => void
-}) {
-  // The skill text field is freely editable (select-all/backspace/clear and
-  // retype) at any point, and keeps giving fresh suggestions whenever the
-  // query changes. `query` is the single source for the input value: it
-  // starts from the current selection and is only changed by typing here or
-  // picking a suggestion. Rows are keyed by a stable per-role id, so an
-  // editor component is never reused for a different role — that makes a
-  // resync effect unnecessary (and such an effect would clobber the user's
-  // typed text the moment a stale selection is cleared below).
-  const [query, setQuery] = useState(role.skill?.name ?? "")
-  const [results, setResults] = useState<Skill[]>([])
-  const [searching, setSearching] = useState(false)
-
-  async function search(q: string) {
-    setQuery(q)
-    // Typing over a previously selected skill drops it from the draft, so
-    // the field behaves like a normal text input — and submit can never
-    // send a stale skill that differs from what the user is looking at.
-    if (role.skill && q !== role.skill.name) {
-      onChange(index, { skill: null })
-    }
-    if (!q.trim()) {
-      setResults([])
-      return
-    }
-    setSearching(true)
-    try {
-      const d = await api<{ skills: Skill[] }>(`/skills?q=${encodeURIComponent(q)}`)
-      setResults(d.skills)
-    } catch {
-      setResults([])
-    } finally {
-      setSearching(false)
-    }
-  }
-
-  function selectSkill(s: Skill) {
-    setQuery(s.name)
-    setResults([])
-    onChange(index, { skill: s })
-  }
-
-  return (
-    <div className="rounded-md border border-border bg-card p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">Role {index + 1}</p>
-        <button
-          type="button"
-          onClick={() => onRemove(index)}
-          className="text-xs text-muted-foreground transition-colors hover:text-destructive"
-        >
-          Remove
-        </button>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-[1fr_140px_110px]">
-        <div>
-          <Label>Skill</Label>
-          <Input
-            value={query}
-            onChange={(e) => search(e.target.value)}
-            placeholder="Search the curated skills…"
-          />
-          {results.length > 0 && (
-            <ul className="absolute z-10 mt-1 max-h-44 w-64 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-              {results.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectSkill(s)}
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
-                  >
-                    {s.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div>
-          <Label>Seniority</Label>
-          <Select
-            value={role.seniority}
-            onChange={(e) => onChange(index, { seniority: e.target.value })}
-          >
-            <option value="any">Any</option>
-            <option value="junior">Junior</option>
-            <option value="mid">Mid</option>
-            <option value="senior">Senior</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Headcount</Label>
-          <Input
-            type="number"
-            min={1}
-            value={role.headcount}
-            onChange={(e) =>
-              onChange(index, { headcount: Math.max(1, Number(e.target.value) || 1) })
-            }
-          />
-        </div>
-      </div>
-      {searching ? <p className="mt-1 text-xs text-muted-foreground">Searching…</p> : null}
+      <ProjectForm
+        mode="create"
+        submitLabel="Post project"
+        initial={{
+          title: "",
+          description: "",
+          repoUrl: "",
+          demoUrl: "",
+          type: "unpaid",
+          status: "open",
+          budget: "",
+          currency: "INR",
+        }}
+        initialRoles={[emptyProjectFormRole()]}
+        onSubmit={onSubmit}
+      />
     </div>
   )
 }
