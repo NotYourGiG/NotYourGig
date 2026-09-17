@@ -19,8 +19,8 @@ export async function createApp(): Promise<INestApplication> {
   // unset. Unset FRONTEND_URL + empty defaults => allow all (local dev).
   const DEFAULT_FRONTEND_URLS = [
     "https://not-your-gig-p5ga.vercel.app",
-    "https://notyourgig.runs.on.dev",
-    "https://www.notyourgig.runs.on.dev",
+    "https://notyourgig.runs-on.dev",
+    "https://www.notyourgig.runs-on.dev",
   ];
   const frontendUrls = [
     ...(process.env.FRONTEND_URL ?? "")
