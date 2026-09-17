@@ -11,12 +11,24 @@ export async function createApp(): Promise<INestApplication> {
   app.setGlobalPrefix("api");
 
   // On Vercel the frontend and backend are separate projects, so the backend
-  // must allow the deployed frontend origin. Configurable via FRONTEND_URL
-  // (comma-separated list). Unset => allow all (local dev).
-  const frontendUrls = (process.env.FRONTEND_URL ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // must allow the deployed frontend origins. The allowlist is the
+  // FRONTEND_URL env var (comma-separated; typically set in the Vercel
+  // dashboard for the backend project) MERGED with the known origins baked
+  // in below — so a dashboard var that only knows the original Vercel
+  // domain still works, and new domains can't be missed if the var is ever
+  // unset. Unset FRONTEND_URL + empty defaults => allow all (local dev).
+  const DEFAULT_FRONTEND_URLS = [
+    "https://not-your-gig-p5ga.vercel.app",
+    "https://notyourgig.runs.on.dev",
+    "https://www.notyourgig.runs.on.dev",
+  ];
+  const frontendUrls = [
+    ...(process.env.FRONTEND_URL ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    ...DEFAULT_FRONTEND_URLS,
+  ].filter((url, index, all) => all.indexOf(url) === index);
   app.enableCors(
     frontendUrls.length > 0
       ? { origin: frontendUrls, credentials: true }
