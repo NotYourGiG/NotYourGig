@@ -38,7 +38,7 @@ export class ConversationsService {
       .from("conversation_participants")
       .select("conversation_id")
       .eq("user_id", authUserId);
-    if (mineErr) throw new Error(`DB error: ${mineErr.message}`);
+    if (mineErr) throw new Error(`DB error: ${mineErr.message}`, { cause: mineErr });
     const conversationIds = (mine ?? []).map((r) => r.conversation_id);
     if (!conversationIds.length) return [];
 
@@ -46,20 +46,20 @@ export class ConversationsService {
       .from("conversation_participants")
       .select(OTHER_USER_SELECT)
       .in("conversation_id", conversationIds);
-    if (pErr) throw new Error(`DB error: ${pErr.message}`);
+    if (pErr) throw new Error(`DB error: ${pErr.message}`, { cause: pErr });
 
     const { data: conversations, error: cErr } = await client
       .from("conversations")
       .select("id, context_type, context_id, created_at, updated_at")
       .in("id", conversationIds);
-    if (cErr) throw new Error(`DB error: ${cErr.message}`);
+    if (cErr) throw new Error(`DB error: ${cErr.message}`, { cause: cErr });
 
     const { data: messages, error: mErr } = await client
       .from("messages")
       .select("id, conversation_id, sender_id, content, created_at")
       .in("conversation_id", conversationIds)
       .order("created_at", { ascending: false });
-    if (mErr) throw new Error(`DB error: ${mErr.message}`);
+    if (mErr) throw new Error(`DB error: ${mErr.message}`, { cause: mErr });
 
     // Newest message per conversation (rows already ordered desc).
     const lastByConversation = new Map<string, MessagePreview>();
@@ -112,7 +112,7 @@ export class ConversationsService {
       .insert({ context_type: null, context_id: null })
       .select("id")
       .single();
-    if (createErr) throw new Error(`DB error: ${createErr.message}`);
+    if (createErr) throw new Error(`DB error: ${createErr.message}`, { cause: createErr });
 
     const { error: p1Err } = await client
       .from("conversation_participants")
@@ -128,7 +128,7 @@ export class ConversationsService {
         .delete()
         .eq("conversation_id", conversation.id);
       await client.from("conversations").delete().eq("id", conversation.id);
-      throw new Error(`DB error: ${p1Err?.message ?? p2Err?.message}`);
+      throw new Error(`DB error: ${p1Err?.message ?? p2Err?.message}`, { cause: p1Err ?? p2Err });
     }
 
     if (content?.trim()) {
@@ -153,7 +153,7 @@ export class ConversationsService {
       .from("conversation_participants")
       .select("conversation_id, user_id, last_read_at")
       .eq("conversation_id", conversationId);
-    if (pErr) throw new Error(`DB error: ${pErr.message}`);
+    if (pErr) throw new Error(`DB error: ${pErr.message}`, { cause: pErr });
     const rows = participants ?? [];
     if (!rows.some((r) => r.user_id === authUserId)) {
       throw new NotFoundException("Conversation not found");
@@ -177,7 +177,7 @@ export class ConversationsService {
       .select(SENDER_SELECT)
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return {
       messages: data ?? [],
       last_read_at: other?.last_read_at ?? null,
@@ -198,7 +198,7 @@ export class ConversationsService {
       })
       .select(SENDER_SELECT)
       .single();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
 
     // Drives the conversation-list sort (no last_message_at column — the
     // conversations.updated_at bump is the ordering signal).
@@ -206,7 +206,7 @@ export class ConversationsService {
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", conversationId);
-    if (bumpErr) throw new Error(`DB error: ${bumpErr.message}`);
+    if (bumpErr) throw new Error(`DB error: ${bumpErr.message}`, { cause: bumpErr });
 
     return message;
   }
@@ -218,7 +218,7 @@ export class ConversationsService {
       .from("conversation_participants")
       .select("conversation_id")
       .eq("user_id", a);
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     const ids = (data ?? []).map((r) => r.conversation_id);
     if (!ids.length) return null;
 
@@ -227,7 +227,7 @@ export class ConversationsService {
       .select("conversation_id")
       .in("conversation_id", ids)
       .eq("user_id", b);
-    if (otherErr) throw new Error(`DB error: ${otherErr.message}`);
+    if (otherErr) throw new Error(`DB error: ${otherErr.message}`, { cause: otherErr });
     return (other ?? [])[0]?.conversation_id ?? null;
   }
 
@@ -239,13 +239,13 @@ export class ConversationsService {
       .select("id, context_type, context_id, created_at, updated_at")
       .eq("id", conversationId)
       .single();
-    if (cErr) throw new Error(`DB error: ${cErr.message}`);
+    if (cErr) throw new Error(`DB error: ${cErr.message}`, { cause: cErr });
 
     const { data: participants, error: pErr } = await client
       .from("conversation_participants")
       .select(OTHER_USER_SELECT)
       .eq("conversation_id", conversationId);
-    if (pErr) throw new Error(`DB error: ${pErr.message}`);
+    if (pErr) throw new Error(`DB error: ${pErr.message}`, { cause: pErr });
 
     const { data: lastMessage, error: mErr } = await client
       .from("messages")
@@ -254,7 +254,7 @@ export class ConversationsService {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (mErr) throw new Error(`DB error: ${mErr.message}`);
+    if (mErr) throw new Error(`DB error: ${mErr.message}`, { cause: mErr });
 
     return {
       ...conversation,
@@ -278,7 +278,7 @@ export class ConversationsService {
       .select("user_id")
       .eq("conversation_id", conversationId)
       .eq("user_id", userId);
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     if (!data?.length) {
       throw new NotFoundException("Conversation not found");
     }

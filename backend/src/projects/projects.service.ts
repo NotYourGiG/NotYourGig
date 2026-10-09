@@ -72,7 +72,7 @@ export class ProjectsService {
     const { data, count, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return { data: data ?? [], total: count ?? 0, page, per_page: perPage };
   }
 
@@ -83,7 +83,7 @@ export class ProjectsService {
       .select(PROJECT_SELECT)
       .eq("id", id)
       .maybeSingle();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     if (!data) throw new NotFoundException("Project not found");
 
     // Live per-role application counts (pending + accepted) — drives the
@@ -100,7 +100,7 @@ export class ProjectsService {
         .select("project_role_id")
         .in("project_role_id", roleIds)
         .in("status", ["pending", "accepted"]);
-      if (countsErr) throw new Error(`DB error: ${countsErr.message}`);
+      if (countsErr) throw new Error(`DB error: ${countsErr.message}`, { cause: countsErr });
       for (const a of apps ?? []) {
         counts.set(a.project_role_id, (counts.get(a.project_role_id) ?? 0) + 1);
       }
@@ -156,7 +156,7 @@ export class ProjectsService {
       })
       .select()
       .single();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
 
     for (const role of dto.roles) {
       const { error: roleError } = await client.from("project_roles").insert({
@@ -205,7 +205,7 @@ export class ProjectsService {
         .update(fields)
         .eq("id", id)
         .select("id");
-      if (error) throw new Error(`DB error: ${error.message}`);
+      if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     }
     return this.findOne(id);
   }
@@ -232,7 +232,7 @@ export class ProjectsService {
       })
       .select()
       .single();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data;
   }
 
@@ -252,7 +252,7 @@ export class ProjectsService {
         "id, skill_id, seniority, headcount_needed, headcount_filled, skill:skills(name)",
       )
       .eq("project_id", projectId);
-    if (e1) throw new Error(`DB error: ${e1.message}`);
+    if (e1) throw new Error(`DB error: ${e1.message}`, { cause: e1 });
     const existing = (existingRows ?? []) as Array<{
       id: string;
       skill_id: string;
@@ -271,7 +271,7 @@ export class ProjectsService {
         .select("project_role_id")
         .in("project_role_id", roleIds)
         .in("status", ["pending", "accepted"]);
-      if (e2) throw new Error(`DB error: ${e2.message}`);
+      if (e2) throw new Error(`DB error: ${e2.message}`, { cause: e2 });
       for (const a of apps ?? []) {
         counts.set(a.project_role_id, (counts.get(a.project_role_id) ?? 0) + 1);
       }
@@ -336,7 +336,7 @@ export class ProjectsService {
     for (const ex of existing) {
       if (!submittedById.has(ex.id)) {
         const { error } = await client.from("project_roles").delete().eq("id", ex.id);
-        if (error) throw new Error(`DB error: ${error.message}`);
+        if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
       }
     }
     for (const role of submitted) {
@@ -361,7 +361,7 @@ export class ProjectsService {
             headcount_needed: role.headcount_needed ?? current.headcount_needed,
           })
           .eq("id", role.id);
-        if (error) throw new Error(`DB error: ${error.message}`);
+        if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
       }
     }
   }
@@ -379,7 +379,7 @@ export class ProjectsService {
       .select("id")
       .eq("id", id)
       .maybeSingle();
-    if (pErr) throw new Error(`DB error: ${pErr.message}`);
+    if (pErr) throw new Error(`DB error: ${pErr.message}`, { cause: pErr });
     if (!project) throw new NotFoundException("Project not found");
 
     const { data: apps, error: aErr } = await client
@@ -387,7 +387,7 @@ export class ProjectsService {
       .select("id")
       .eq("project_id", id)
       .limit(1);
-    if (aErr) throw new Error(`DB error: ${aErr.message}`);
+    if (aErr) throw new Error(`DB error: ${aErr.message}`, { cause: aErr });
     if ((apps ?? []).length > 0) {
       throw new BadRequestException(
         "Project can't be deleted while it has applications — close it instead",
@@ -400,7 +400,7 @@ export class ProjectsService {
       .from("project_roles")
       .delete()
       .eq("project_id", id);
-    if (rolesErr) throw new Error(`DB error: ${rolesErr.message}`);
+    if (rolesErr) throw new Error(`DB error: ${rolesErr.message}`, { cause: rolesErr });
 
     const { error: delErr } = await client.from("projects").delete().eq("id", id);
     if (delErr) {
@@ -409,7 +409,7 @@ export class ProjectsService {
           "Project can't be deleted because another record still references it (e.g. proof of work)",
         );
       }
-      throw new Error(`DB error: ${delErr.message}`);
+      throw new Error(`DB error: ${delErr.message}`, { cause: delErr });
     }
   }
 
@@ -425,7 +425,7 @@ export class ProjectsService {
       )
       .eq("project_id", projectId)
       .order("created_at");
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data ?? [];
   }
 }

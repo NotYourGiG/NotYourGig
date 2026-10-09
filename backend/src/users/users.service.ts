@@ -30,7 +30,7 @@ export class UsersService {
       )
       .eq("id", id)
       .maybeSingle();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     if (!data) throw new NotFoundException("User not found");
     const [skills, proof] = await Promise.all([
       this.listSkills(id),
@@ -47,7 +47,7 @@ export class UsersService {
       .eq("id", id)
       .select("*")
       .single();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data;
   }
 
@@ -61,7 +61,7 @@ export class UsersService {
       .from("user_skills")
       .select("level, verified_via, skill:skills(id, name, category)")
       .eq("user_id", userId);
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
 
     const rows = (data ?? []) as unknown as Array<{
       level: string;
@@ -97,7 +97,7 @@ export class UsersService {
       if (error.code === "23505") {
         throw new BadRequestException("Skill already added");
       }
-      throw new Error(`DB error: ${error.message}`);
+      throw new Error(`DB error: ${error.message}`, { cause: error });
     }
   }
 
@@ -108,7 +108,7 @@ export class UsersService {
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data ?? [];
   }
 
@@ -129,7 +129,7 @@ export class UsersService {
       .insert({ user_id: userId, source: "manual", ...entry })
       .select("*")
       .single();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data;
   }
 
@@ -141,7 +141,7 @@ export class UsersService {
       .delete()
       .eq("id", proofId)
       .eq("user_id", userId);
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
   }
 
   /** Curated skills list search (blueprint §6: pick from the table, no free text). */
@@ -152,7 +152,7 @@ export class UsersService {
       query = query.ilike("name", `%${q}%`);
     }
     const { data, error } = await query.limit(25);
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data ?? [];
   }
 
@@ -181,7 +181,7 @@ export class UsersService {
         .select(BUILDER_FIELDS, { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
-      if (error) throw new Error(`DB error: ${error.message}`);
+      if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
       const rows = data ?? [];
       return {
         data: rows.map((r) => ({
@@ -209,7 +209,7 @@ export class UsersService {
         .ilike("skill.name", needle),
     ]);
     if (nameErr ?? skillErr) {
-      throw new Error(`DB error: ${nameErr?.message ?? skillErr?.message}`);
+      throw new Error(`DB error: ${nameErr?.message ?? skillErr?.message}`, { cause: nameErr ?? skillErr });
     }
 
     const candidateSet = new Set<string>();
@@ -225,7 +225,7 @@ export class UsersService {
       .from("users")
       .select("id, created_at")
       .in("id", candidateIds);
-    if (datedErr) throw new Error(`DB error: ${datedErr.message}`);
+    if (datedErr) throw new Error(`DB error: ${datedErr.message}`, { cause: datedErr });
     const createdBy = new Map((dated ?? []).map((u) => [u.id, u.created_at]));
     const ordered = candidateIds.sort((a, b) =>
       (createdBy.get(b) ?? "").localeCompare(createdBy.get(a) ?? ""),
@@ -244,7 +244,7 @@ export class UsersService {
       .from("users")
       .select(BUILDER_FIELDS)
       .in("id", pageIds);
-    if (rowsErr) throw new Error(`DB error: ${rowsErr.message}`);
+    if (rowsErr) throw new Error(`DB error: ${rowsErr.message}`, { cause: rowsErr });
     const byId = new Map((rows ?? []).map((r) => [r.id, r]));
 
     const data: Array<{

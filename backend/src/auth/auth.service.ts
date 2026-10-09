@@ -74,7 +74,7 @@ export class AuthService {
       .select("*")
       .eq("clerk_id", clerkUserId)
       .maybeSingle();
-    if (error) throw new Error(`DB error resolving user: ${error.message}`);
+    if (error) throw new Error(`DB error resolving user: ${error.message}`, { cause: error });
     if (existing) return existing as AuthUser;
 
     // First login: fetch the profile from Clerk and create our row.

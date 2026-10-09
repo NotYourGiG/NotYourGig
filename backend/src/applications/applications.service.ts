@@ -81,7 +81,7 @@ export class ApplicationsService {
       })
       .select()
       .single();
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data;
   }
 
@@ -97,7 +97,7 @@ export class ApplicationsService {
       )
       .eq("applicant_user_id", userId)
       .order("created_at", { ascending: false });
-    if (error) throw new Error(`DB error: ${error.message}`);
+    if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
     return data ?? [];
   }
 
@@ -133,7 +133,7 @@ export class ApplicationsService {
         .from("applications")
         .update({ status })
         .eq("id", applicationId);
-      if (error) throw new Error(`DB error: ${error.message}`);
+      if (error) throw new Error(`DB error: ${error.message}`, { cause: error });
       return;
     }
 
@@ -147,7 +147,7 @@ export class ApplicationsService {
       .from("applications")
       .update({ status })
       .eq("id", applicationId);
-    if (statusError) throw new Error(`DB error: ${statusError.message}`);
+    if (statusError) throw new Error(`DB error: ${statusError.message}`, { cause: statusError });
 
     if (status !== "accepted") return;
 
@@ -165,7 +165,7 @@ export class ApplicationsService {
           "This person is already a member of this project — they can't fill a second role",
         );
       }
-      throw new Error(`DB error: ${memberError.message}`);
+      throw new Error(`DB error: ${memberError.message}`, { cause: memberError });
     }
 
     const { data: role } = await client

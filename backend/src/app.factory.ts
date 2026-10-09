@@ -2,6 +2,7 @@ import type { INestApplication } from "@nestjs/common";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./all-exceptions.filter";
 
 // Shared bootstrap used by main.ts (local dev / Node host) and by the Vercel
 // serverless handler. Keeps global prefix, CORS and pipes in one place.
@@ -36,6 +37,12 @@ export async function createApp(): Promise<INestApplication> {
   );
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // Catch every unhandled error (incl. `DB error: ...` from the services) and
+  // log error.cause — ENOTFOUND/ETIMEDOUT/ECONNREFUSED/TLS reasons live there —
+  // before Nest's default handler writes the 500 response.
+  app.useGlobalFilters(new AllExceptionsFilter(app.getHttpAdapter()));
+
   await app.init();
   return app;
 }
